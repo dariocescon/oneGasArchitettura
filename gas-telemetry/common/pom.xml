@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.aton.proj</groupId>
+        <artifactId>gas-telemetry</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>gas-telemetry-common</artifactId>
+    <name>gas-telemetry-common</name>
+    <description>Interfacce e modelli condivisi tra Worker e Decoder (nessuna dipendenza Spring)</description>
+
+    <!--
+        common non dipende da Spring né da librerie esterne:
+        contiene solo interfacce Java e record.
+        Questo lo rende usabile da qualsiasi runtime (Spring Boot, Azure Functions, ecc.)
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

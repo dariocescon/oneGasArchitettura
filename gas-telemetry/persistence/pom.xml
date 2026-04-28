@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.aton.proj</groupId>
+        <artifactId>gas-telemetry</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>gas-telemetry-persistence</artifactId>
+    <name>gas-telemetry-persistence</name>
+    <description>Entity JPA e repository condivisi tra worker, decoder e command-api.
+        Nessuna logica di business: solo modello di dominio + accesso dati.</description>
+
+    <dependencies>
+        <!-- Common: nessuna dipendenza diretta oggi, ma è il punto naturale per
+             condividere tipi se in futuro servono (es. Measure record) -->
+        <dependency>
+            <groupId>com.aton.proj</groupId>
+            <artifactId>gas-telemetry-common</artifactId>
+        </dependency>
+
+        <!-- Spring Data JPA: l'unica dipendenza Spring richiesta a questo livello.
+             Ogni modulo applicativo (worker/decoder/command-api) porta il proprio
+             starter completo + driver JDBC. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Jackson per serializzare/deserializzare command_params (Map<String,Object>)
+             usato in CommandEntity.toCommandEntry(...) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

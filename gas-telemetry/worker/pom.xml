@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>com.aton.proj</groupId>
+		<artifactId>gas-telemetry</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>gas-telemetry-worker</artifactId>
+	<name>gas-telemetry-worker</name>
+	<description>Worker: riceve dati dal device, pubblica su Event Hub, gestisce
+		comandi</description>
+
+	<dependencies>
+		<!-- Interfacce condivise -->
+		<dependency>
+			<groupId>com.aton.proj</groupId>
+			<artifactId>gas-telemetry-common</artifactId>
+		</dependency>
+
+		<!-- Entity JPA / Repository condivisi (CommandEntity, ConfigEntity, ...) -->
+		<dependency>
+			<groupId>com.aton.proj</groupId>
+			<artifactId>gas-telemetry-persistence</artifactId>
+		</dependency>
+
+		<!-- Spring Boot base (no web: è un server TCP, non HTTP) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- TCP server (porta le classi TcpSocketServer / handler) -->
+		<dependency>
+			<groupId>org.springframework.integration</groupId>
+			<artifactId>spring-integration-ip</artifactId>
+		</dependency>
+
+		<!-- JPA per CommandRepository (PostgreSQL + TimescaleDB) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<!-- PostgreSQL driver: in step 3 della roadmap si è scelto un unico DB
+		     PostgreSQL+TimescaleDB condiviso da worker (device_commands) e
+		     decoder (device_config + hypertable misure). -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Azure Event Hub: produttore (publishPrimaryData) -->
+		<!-- Source:
+		https://mvnrepository.com/artifact/com.azure/azure-messaging-eventhubs -->
+		<dependency>
+			<groupId>com.azure</groupId>
+			<artifactId>azure-messaging-eventhubs</artifactId>
+		</dependency>
+
+		<!-- Jackson per serializzare/deserializzare command_params (Map<String,Object>) -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+
+		<!-- Logging -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-log4j2</artifactId>
+		</dependency>
+
+		<!-- Configuration processor -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-configuration-processor</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Test -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- H2 in scope runtime: serve sia ai test (DataJpaTest) sia al profilo
+		     Spring "local" per consentire l'avvio del worker senza un DB esterno. -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
