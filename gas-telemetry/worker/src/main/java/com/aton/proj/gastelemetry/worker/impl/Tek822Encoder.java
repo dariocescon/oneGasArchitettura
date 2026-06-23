@@ -63,13 +63,35 @@ public class Tek822Encoder {
     public static final String CMD_SET_APN                 = "SET_APN";              // S12/S13/S14
     public static final String CMD_SET_SERVER              = "SET_SERVER";           // S15/S16
 
+    // ---- S-register aggiuntivi (sezioni 3.20.4, 3.20.6, 3.20.7-16 del manuale) ----
+    public static final String CMD_SET_CONTROL_CONFIG      = "SET_CONTROL_CONFIG";    // S3 (network mode + flags)
+    public static final String CMD_SET_DYNAMIC_LIMIT_1     = "SET_DYNAMIC_LIMIT_1";   // S7
+    public static final String CMD_SET_DYNAMIC_LIMIT_2     = "SET_DYNAMIC_LIMIT_2";   // S8
+    public static final String CMD_SET_PASSWORD            = "SET_PASSWORD";          // S11
+    public static final String CMD_SET_BATTERY_CAPACITY    = "SET_BATTERY_CAPACITY";  // S17
+    public static final String CMD_SET_F_STOP              = "SET_F_STOP";            // S18
+    public static final String CMD_SET_CONTROL3_CONFIG     = "SET_CONTROL3_CONFIG";   // S19 (APN auth)
+    public static final String CMD_SET_E_STOP              = "SET_E_STOP";            // S20
+    public static final String CMD_SET_MCC_MNC             = "SET_MCC_MNC";           // S21
+    public static final String CMD_SET_LTE_BAND            = "SET_LTE_BAND";          // S22
+    public static final String CMD_SET_RETRY_CONFIG        = "SET_RETRY_CONFIG";      // S23
+    public static final String CMD_SET_SCHEDULE_DELAY      = "SET_SCHEDULE_DELAY";    // S24
+    public static final String CMD_SET_CONTROL2_CONFIG     = "SET_CONTROL2_CONFIG";   // S26 (sensor format)
+    public static final String CMD_SET_CONTROL4_CONFIG     = "SET_CONTROL4_CONFIG";   // S29
+
     /**
      * S-command types: modificano registri di configurazione e richiedono
      * R3=ACTIVE (reboot) per applicare le modifiche (sezione 3.20 del manuale).
      */
     private static final Set<String> S_COMMAND_TYPES = Set.of(
             CMD_SET_INTERVAL, CMD_SET_LISTEN, CMD_SET_SCHEDULE,
-            CMD_SET_ALARM_THRESHOLD, CMD_SET_APN, CMD_SET_SERVER);
+            CMD_SET_ALARM_THRESHOLD, CMD_SET_APN, CMD_SET_SERVER,
+            CMD_SET_CONTROL_CONFIG, CMD_SET_DYNAMIC_LIMIT_1, CMD_SET_DYNAMIC_LIMIT_2,
+            CMD_SET_PASSWORD, CMD_SET_BATTERY_CAPACITY,
+            CMD_SET_F_STOP, CMD_SET_CONTROL3_CONFIG, CMD_SET_E_STOP,
+            CMD_SET_MCC_MNC, CMD_SET_LTE_BAND,
+            CMD_SET_RETRY_CONFIG, CMD_SET_SCHEDULE_DELAY,
+            CMD_SET_CONTROL2_CONFIG, CMD_SET_CONTROL4_CONFIG);
 
     /** Password di default (sezione 3.9 del manuale) */
     private static final String DEFAULT_PASSWORD = "TEK822";
@@ -163,6 +185,20 @@ public class Tek822Encoder {
             case CMD_REQUEST_DIAGNOSTIC_DATA -> encodeRequestDiagnosticData(password);
             case CMD_SET_APN                 -> encodeSetAPN(password, cmd);
             case CMD_SET_SERVER              -> encodeSetServer(password, cmd);
+            case CMD_SET_CONTROL_CONFIG      -> encodeSetControlConfig(password, cmd);
+            case CMD_SET_DYNAMIC_LIMIT_1     -> encodeSetDynamicLimit(password, cmd, "S7");
+            case CMD_SET_DYNAMIC_LIMIT_2     -> encodeSetDynamicLimit(password, cmd, "S8");
+            case CMD_SET_PASSWORD            -> encodeSetPassword(password, cmd);
+            case CMD_SET_BATTERY_CAPACITY    -> encodeSetBatteryCapacity(password, cmd);
+            case CMD_SET_F_STOP              -> encodeSetFStop(password, cmd);
+            case CMD_SET_CONTROL3_CONFIG     -> encodeSetControl3Config(password, cmd);
+            case CMD_SET_E_STOP              -> encodeSetEStop(password, cmd);
+            case CMD_SET_MCC_MNC             -> encodeSetMccMnc(password, cmd);
+            case CMD_SET_LTE_BAND            -> encodeSetLteBand(password, cmd);
+            case CMD_SET_RETRY_CONFIG        -> encodeSetRetryConfig(password, cmd);
+            case CMD_SET_SCHEDULE_DELAY      -> encodeSetScheduleDelay(password, cmd);
+            case CMD_SET_CONTROL2_CONFIG     -> encodeSetControl2Config(password, cmd);
+            case CMD_SET_CONTROL4_CONFIG     -> encodeSetControl4Config(password, cmd);
             default -> throw new IllegalArgumentException("Command type sconosciuto: " + cmd.commandType());
         };
     }
@@ -287,6 +323,169 @@ public class Tek822Encoder {
         String ip   = cmd.getParam("serverIp").toString();
         String port = cmd.getParam("serverPort").toString();
         return String.format("%s,S15=%s,S16=%s", pw, ip, port);
+    }
+
+    // ---- S3: Control Configurator (sezione 3.20.4) ----
+    // Bitmask: bits[1:0] = Network Mode (0=LTE CatM1, 1=NB-IoT, 2=2G, 3=Auto);
+    //          bit 2 = Send Msg #16 monthly; bit 3 = reserved;
+    //          bit 4 = Dry Contact P1; bit 5 = CRC checking; bit 6 = Delivery Report;
+    //          bit 7 = Verbose TSP.
+    // Esempio XLSM: networkMode=3 (Auto) + verboseTSP=1 → S3 = 0b10000011 = 0x83
+    private String encodeSetControlConfig(String pw, CommandEntry cmd) {
+        int networkMode = Integer.parseInt(cmd.getParamOrDefault("networkMode", "0").toString()) & 0x03;
+        boolean sendMsg16Monthly = Boolean.parseBoolean(cmd.getParamOrDefault("sendMsg16Monthly", "false").toString());
+        boolean dryContactP1     = Boolean.parseBoolean(cmd.getParamOrDefault("dryContactP1",     "false").toString());
+        boolean crcEnabled       = Boolean.parseBoolean(cmd.getParamOrDefault("crcEnabled",       "false").toString());
+        boolean deliveryReport   = Boolean.parseBoolean(cmd.getParamOrDefault("deliveryReport",   "false").toString());
+        boolean verboseTsp       = Boolean.parseBoolean(cmd.getParamOrDefault("verboseTsp",       "false").toString());
+        int value = networkMode
+                | ((sendMsg16Monthly ? 1 : 0) << 2)
+                | ((dryContactP1     ? 1 : 0) << 4)
+                | ((crcEnabled       ? 1 : 0) << 5)
+                | ((deliveryReport   ? 1 : 0) << 6)
+                | ((verboseTsp       ? 1 : 0) << 7);
+        return String.format("%s,S3=%02X", pw, value);
+    }
+
+    // ---- S7/S8: Dynamic Limit (sezione 3.20.6) ----
+    // Formula: S7 = (polarity << 7) | (enabled << 6) | (rate & 0x3F)
+    //   - polarity: 1 = alarm if rising, 0 = alarm if falling
+    //   - enabled: 1 = abilita allarme dinamico
+    //   - rate: 0-63 units/min o /15min in base a S0 bit 7
+    // S8 può anche operare come No-Change Alarm (NCA) a seconda di S26 bit 4.
+    private String encodeSetDynamicLimit(String pw, CommandEntry cmd, String register) {
+        boolean polarity = Boolean.parseBoolean(cmd.getParamOrDefault("polarity", "false").toString());
+        boolean enabled  = Boolean.parseBoolean(cmd.getParamOrDefault("enabled",  "false").toString());
+        int rate         = Integer.parseInt(cmd.getParamOrDefault("rate", "0").toString()) & 0x3F;
+        int value = ((polarity ? 1 : 0) << 7) | ((enabled ? 1 : 0) << 6) | rate;
+        return String.format("%s,%s=%02X", pw, register, value);
+    }
+
+    // ---- S11: Unit Password (sezione 3.9) ----
+    // ASCII max 6 caratteri. Permette di ruotare la password che il device richiede
+    // in testa ai comandi (cfr. composeAsciiPayload nel Worker).
+    private String encodeSetPassword(String pw, CommandEntry cmd) {
+        String newPwd = cmd.getParam("newPassword").toString();
+        return String.format("%s,S11=%s", pw, newPwd);
+    }
+
+    // ---- S17: Battery Capacity (sezione 3.10) ----
+    // Capacità in mAh, codificata come hex 4 cifre. Esempi: 3600="0E10", 7200="1C20",
+    // 7700="1E14", 17500="445C".
+    private String encodeSetBatteryCapacity(String pw, CommandEntry cmd) {
+        int capacityMah = Integer.parseInt(cmd.getParam("capacityMah").toString());
+        return String.format("%s,S17=%04X", pw, capacityMah);
+    }
+
+    // ---- S18: F-Stop (sezione 3.20.8) — calibrazione ratiometrica Max ----
+    // Formula: S18 = round((200 × voltage) / 5)
+    // Esempio: 5V → S18 = 200 = 0xC8
+    private String encodeSetFStop(String pw, CommandEntry cmd) {
+        double voltage = Double.parseDouble(cmd.getParam("voltage").toString());
+        int value = (int) Math.round((200.0 * voltage) / 5.0);
+        return String.format("%s,S18=%02X", pw, value);
+    }
+
+    // ---- S19: Control3 Configurator (sezione 3.20.9) ----
+    // bit 0: APN Auth Type (0 = PAP or CHAP, 1 = None)
+    // bit 1: Inhibit background beeping
+    // bit 2: Fallback to GPRS from LTE
+    // bits 3-7: reserved
+    private String encodeSetControl3Config(String pw, CommandEntry cmd) {
+        boolean apnAuthNone   = Boolean.parseBoolean(cmd.getParamOrDefault("apnAuthNone",   "false").toString());
+        boolean inhibitBeep   = Boolean.parseBoolean(cmd.getParamOrDefault("inhibitBeep",   "false").toString());
+        boolean fallbackGprs  = Boolean.parseBoolean(cmd.getParamOrDefault("fallbackGprs",  "false").toString());
+        int value = ((apnAuthNone  ? 1 : 0))
+                | ((inhibitBeep   ? 1 : 0) << 1)
+                | ((fallbackGprs  ? 1 : 0) << 2);
+        return String.format("%s,S19=%02X", pw, value);
+    }
+
+    // ---- S20: E-Stop (sezione 3.20.10) — calibrazione ratiometrica Min ----
+    // Formula: S20 = round((200 × voltage) / 5)
+    // Esempio: 1V → S20 = 40 = 0x28
+    private String encodeSetEStop(String pw, CommandEntry cmd) {
+        double voltage = Double.parseDouble(cmd.getParam("voltage").toString());
+        int value = (int) Math.round((200.0 * voltage) / 5.0);
+        return String.format("%s,S20=%02X", pw, value);
+    }
+
+    // ---- S21: MCC_MNC operatore (sezione 3.20.11) ----
+    // ASCII, es. "27201" per Vodafone IE. Lascia vuoto per 2G.
+    private String encodeSetMccMnc(String pw, CommandEntry cmd) {
+        String mccMnc = cmd.getParamOrDefault("mccMnc", "").toString();
+        return String.format("%s,S21=%s", pw, mccMnc);
+    }
+
+    // ---- S22: LTE Band (sezione 3.20.12) ----
+    // Codice hex della banda. Tabella PDF: B1=1, B2=2, B3=4, B4=8, B5=10, B8=80,
+    // B12=800, B13=1000, B18=20000, B19=40000, B20=80000, B26=2000000,
+    // B28=8000000, B39=4000000000.
+    private String encodeSetLteBand(String pw, CommandEntry cmd) {
+        // bandCode è un long perché B39 = 4_000_000_000 > Integer.MAX_VALUE
+        long bandCode = Long.parseLong(cmd.getParam("bandCode").toString());
+        return String.format("%s,S22=%X", pw, bandCode);
+    }
+
+    // ---- S23: Message Deliver Configuration (sezione 3.20.13) ----
+    // Formula: X = tryTickets - 1; Y = (periodSec / 10) - 1; S23 = X + (Y × 8)
+    // Esempio: tryTickets=4, periodSec=30 → X=3, Y=2 → S23 = 3 + 16 = 19 = 0x13
+    private String encodeSetRetryConfig(String pw, CommandEntry cmd) {
+        int tryTickets = Integer.parseInt(cmd.getParam("tryTickets").toString());
+        int periodSec  = Integer.parseInt(cmd.getParam("periodSec").toString());
+        int x = tryTickets - 1;
+        int y = (periodSec / 10) - 1;
+        int value = x + (y * 8);
+        return String.format("%s,S23=%02X", pw, value);
+    }
+
+    // ---- S24: Schedule Delay (sezione 3.20.14) ----
+    // Ritardo in minuti dal trigger di S2, max 14. Permette di spalmare il traffico
+    // di più device che condividono lo stesso schedule.
+    private String encodeSetScheduleDelay(String pw, CommandEntry cmd) {
+        int delayMinutes = Integer.parseInt(cmd.getParam("delayMinutes").toString());
+        return String.format("%s,S24=%02X", pw, delayMinutes);
+    }
+
+    // ---- S26: Control2 Configurator (sezione 3.20.15) ----
+    // **Critico** per interpretare le misure (bits 5/6/7 definiscono unità ADC).
+    // bit 0: Enable Temperature Alarm
+    // bit 1: SMS Disable fallback (GPRS only)
+    // bit 2: SMS Alarm only fallback
+    // bit 3: Reserved
+    // bit 4: For No Change Alarm Set / DynLim2 Alarm Clear
+    // bit 5: ADC Sensor1 — 0=Normal, 1=Inverted output
+    // bit 6: ADC Sensor1 — 0=Low Res 0-100%, 1=High Res 0-1000
+    // bit 7: ADC Sensor1 — 0=usa bit 5/6, 1=Raw 10-bit ADC 0-1023
+    private String encodeSetControl2Config(String pw, CommandEntry cmd) {
+        boolean tempAlarm     = Boolean.parseBoolean(cmd.getParamOrDefault("temperatureAlarm",   "false").toString());
+        boolean smsDisable    = Boolean.parseBoolean(cmd.getParamOrDefault("smsDisableFallback", "false").toString());
+        boolean smsAlarmOnly  = Boolean.parseBoolean(cmd.getParamOrDefault("smsAlarmOnly",       "false").toString());
+        boolean noChangeAlarm = Boolean.parseBoolean(cmd.getParamOrDefault("noChangeAlarm",      "false").toString());
+        boolean adcInverted   = Boolean.parseBoolean(cmd.getParamOrDefault("adcInverted",        "false").toString());
+        boolean adcHighRes    = Boolean.parseBoolean(cmd.getParamOrDefault("adcHighRes",         "false").toString());
+        boolean adcRaw        = Boolean.parseBoolean(cmd.getParamOrDefault("adcRaw",             "false").toString());
+        int value = ((tempAlarm     ? 1 : 0))
+                | ((smsDisable    ? 1 : 0) << 1)
+                | ((smsAlarmOnly  ? 1 : 0) << 2)
+                | ((noChangeAlarm ? 1 : 0) << 4)
+                | ((adcInverted   ? 1 : 0) << 5)
+                | ((adcHighRes    ? 1 : 0) << 6)
+                | ((adcRaw        ? 1 : 0) << 7);
+        return String.format("%s,S26=%02X", pw, value);
+    }
+
+    // ---- S29: Control4 Configurator (sezione 3.20.16) ----
+    // bits 0-2: reserved
+    // bit 3: Long timeframe retry disabilitato (0=abilitato, 1=disabilitato)
+    // bits 4-5: Dynamic Limit 1 Offset Timer (0=disabled, 1=15min, 2=30min, 3=60min)
+    // bits 6-7: reserved
+    private String encodeSetControl4Config(String pw, CommandEntry cmd) {
+        boolean disableLongRetry = Boolean.parseBoolean(cmd.getParamOrDefault("disableLongRetry", "false").toString());
+        int dynLim1OffsetTimer   = Integer.parseInt(cmd.getParamOrDefault("dynLim1OffsetTimer", "0").toString()) & 0x03;
+        int value = ((disableLongRetry ? 1 : 0) << 3)
+                | (dynLim1OffsetTimer << 4);
+        return String.format("%s,S29=%02X", pw, value);
     }
 
 }
