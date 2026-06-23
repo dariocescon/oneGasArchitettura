@@ -1,6 +1,7 @@
 %% Diagramma flusso decodifica TEK822
-%% Mostra il routing dei messaggi in arrivo per tipo, la generazione di Measure
-%% e la generazione di Alarm (sia auto-segnalati dal device sia server-side).
+%% Mostra il routing dei messaggi in arrivo per tipo, evidenziando che la
+%% diagnostica header (byte 0-6) e gli alarm device (byte 4) sono comuni a
+%% TUTTI i tipi di messaggio (rimossi dai rami specifici dopo il refactor).
 
 flowchart TB
     Start(["Payload TEK822 in arrivo<br/>dal Worker"])
@@ -9,55 +10,65 @@ flowchart TB
     CheckLen -->|"NO"| Discard["Scarta + warn"]
     CheckLen -->|"SI"| ReadType["Estrai msgType<br/>= data[15] & 0x3F"]
 
-    ReadType --> Switch{"msgType<br/>?"}
+    ReadType --> BaseTs["Calcola baseTimestamp:<br/>RTC per #4/#8/#9,<br/>now() per #6/#16/#17"]
 
-    Switch -->|"4, 8, 9"| DecodeMeasures
+    subgraph CommonHeader ["Diagnostica COMUNE — per ogni Msg type"]
+        direction TB
+        CH1["decodeHeaderDiagnostics(data, baseTs)<br/>byte 0-6: product_type, hw/fw rev,<br/>csq, battery, rtc_set, lte_active"]
+        CH2["Measure contact_reason_flags = byte[3]<br/>(+ FlagDecoder.contactReasonFlags)"]
+        CH3["Measure alarm_status_flags = byte[4]<br/>(+ FlagDecoder.alarmStatusFlags)"]
+        CH4["decodeDeviceAlarms(data, baseTs)<br/>byte 4 bit 0-3:<br/>DEVICE_LIMIT_1/2/3, BUND"]
+        CH1 --> CH2 --> CH3 --> CH4
+    end
+
+    BaseTs --> CommonHeader
+    CommonHeader --> Switch{"msgType<br/>?"}
+
+    Switch -->|"4, 8, 9"| DecodeMeasureBody
     Switch -->|"6"| DecodeSettings
     Switch -->|"16"| DecodeStats
     Switch -->|"17"| DecodeGps
     Switch -->|"altri (2, ...)"| Unknown["Log warning<br/>+ DecodedPacket vuoto"]
 
-    subgraph DecodeMeasures ["Decodifica misure (Msg 4/8/9)"]
+    subgraph DecodeMeasureBody ["Body Msg #4/#8/#9 (binary measures)"]
         direction TB
-        DM1["Ricostruisci timestamp base<br/>da RTC (byte 19+25) + server date<br/>(con midnight wrap)"]
-        DM2["Calcola loggerSpeed<br/>dal byte 23"]
-        DM3["Estrai diagnostica rete<br/>(byte 22, 24)"]
-        DM3b["Estrai byte 3 (ContactReason)<br/>+ byte 4 (AlarmStatus)<br/>come Measure diagnostiche"]
-        DM4["Genera Alarm device<br/>dai bit del byte 4:<br/>Limit1/2/3, Bund"]
-        DM5["Per ogni slot 26+i*4:<br/>se != 0x00000000<br/>estrai dist, temp, aux1, aux2"]
-        DM6["Applica AlarmRule server-side<br/>(TankLow, TankHigh, Battery, Temp)"]
-        DM1 --> DM2 --> DM3 --> DM3b --> DM4 --> DM5 --> DM6
+        DM1["decodeMeasureMessageDiagnostics<br/>byte 17-18: message_count<br/>byte 19: try_tickets_remaining<br/>byte 20-21: energy_used_mah"]
+        DM2["decodeNetworkDiagnostics<br/>byte 22: tech_code + mnc<br/>byte 24: login_time_s"]
+        DM3["resolveLoggerSpeed (byte 23)"]
+        DM4["Per ogni slot 26 + i*4:<br/>se != 0x00000000<br/>estrai distance_cm, temperature_c,<br/>aux1, aux2"]
+        DM5["AlarmRule server-side<br/>(TankLow, TankHigh, Battery, Temp)"]
+        DM1 --> DM2 --> DM3 --> DM4 --> DM5
     end
 
-    subgraph DecodeSettings ["Decodifica settings (Msg 6)"]
+    subgraph DecodeSettings ["Body Msg #6 (settings ASCII)"]
         direction TB
-        DS1["Estrai ASCII payload<br/>(byte 17 fino a N-3,<br/>esclude CRC trailer)"]
+        DS1["Estrai ASCII payload<br/>(byte 17 fino a N-3, esclude CRC)"]
         DS2["Split per ','<br/>per ogni 'Sx=value'..."]
-        DS3["Parse value come HEX<br/>(Long.parseLong base 16)<br/>NB: non decimale!"]
-        DS4["ASCII puri (APN/IP/password)<br/>falliscono parse hex<br/>=> saltati silenziosamente"]
-        DS1 --> DS2 --> DS3 --> DS4
+        DS3["value = Long.parseLong(raw, 16)<br/>se possibile, altrimenti 0"]
+        DS4["unit = stringa raw ASCII<br/>(preserva APN, IP, password,<br/>vuoti, hex)"]
+        DS5["Emette: setting.S0 .. setting.S29<br/>(tutti i 30, nessuno scartato)"]
+        DS1 --> DS2 --> DS3 --> DS4 --> DS5
     end
 
-    subgraph DecodeStats ["Decodifica statistiche (Msg 16)"]
+    subgraph DecodeStats ["Body Msg #16 (statistics)"]
         direction TB
-        DT1["Estrai ASCII payload"]
-        DT2["Split CSV"]
-        DT3["12 campi attesi:<br/>ICCID, energy, minT, maxT,<br/>msgCount, failCount,<br/>sendTimes, RSSI"]
-        DT1 --> DT2 --> DT3
+        DT1["Estrai ASCII payload + split CSV"]
+        DT2["12 obisCode emessi:<br/>stats.iccid (string)<br/>stats.energy_used_ma_minutes<br/>stats.min/max_temperature_c<br/>stats.message_count, delivery_fail<br/>stats.total/max/min_send_time_s<br/>stats.rssi_total/valid_count/fail_count"]
+        DT1 --> DT2
     end
 
-    subgraph DecodeGps ["Decodifica GPS (Msg 17)"]
+    subgraph DecodeGps ["Body Msg #17 (GPS)"]
         direction TB
-        DG1["Estrai ASCII payload"]
-        DG2["Split CSV"]
-        DG3["12 campi attesi:<br/>timeToFix, UTC, lat, lon,<br/>alt, mode, speed, date, sat"]
-        DG1 --> DG2 --> DG3
+        DG1["Estrai ASCII payload + split CSV"]
+        DG2["12 obisCode emessi:<br/>gps.time_to_fix_s, gps.hdop,<br/>gps.altitude_m, gps.fix_mode,<br/>gps.heading_deg, gps.speed_kmh,<br/>gps.speed_knots, gps.satellites,<br/>gps.utc, gps.latitude, gps.longitude,<br/>gps.date (NMEA strings in unit)"]
+        DG1 --> DG2
     end
 
-    DecodeMeasures --> Publish
+    DecodeMeasureBody --> Publish
     DecodeSettings --> Publish
     DecodeStats --> Publish
     DecodeGps --> Publish
+    Unknown --> Publish
 
     Publish["publishDecodedData(deviceId,<br/>DecodedPacket(measures, alarms))"]
     Publish --> TS["Persistenza<br/>TimescaleDB:<br/>device_measures<br/>device_alarms"]
@@ -68,13 +79,15 @@ flowchart TB
     MTAlarm --> TS
 
     classDef start fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef common fill:#fff8e1,stroke:#f57f17,stroke-width:2px
     classDef decode fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     classDef alarm fill:#ffebee,stroke:#c62828,stroke-width:2px
     classDef persist fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
     classDef error fill:#fafafa,stroke:#616161,stroke-width:1px,stroke-dasharray:5
 
     class Start start
-    class DecodeMeasures,DecodeSettings,DecodeStats,DecodeGps,DM1,DM2,DM3,DM3b,DM5,DS1,DS2,DS3,DS4,DT1,DT2,DT3,DG1,DG2,DG3 decode
-    class DM4,DM6,Scheduler,MT,MTAlarm alarm
+    class CommonHeader,CH1,CH2,CH3 common
+    class DecodeMeasureBody,DecodeSettings,DecodeStats,DecodeGps,DM1,DM2,DM3,DS1,DS2,DS3,DS4,DS5,DT1,DT2,DG1,DG2 decode
+    class CH4,DM4,DM5,Scheduler,MT,MTAlarm alarm
     class Publish,TS persist
     class Discard,Unknown error

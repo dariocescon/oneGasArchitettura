@@ -54,7 +54,12 @@ per il flusso completo di smistamento.
 - L'intero payload arriva sul canale TCP/UDP del worker come **byte binari grezzi**.
 - Gli ultimi **2 byte** sono il **CRC** del messaggio (polinomio non documentato da Tekelek;
   la validazione non è implementata — si confida nell'integrità del layer TCP).
-- La **lunghezza del body** è dichiarata nei byte 15+16 (vedi §3): `((byte15 >> 6) & 0x03) × 256 + byte16`.
+- La **lunghezza del body** è dichiarata nei byte 15+16: `((byte15 >> 6) & 0x03) × 256 + byte16`
+  (vedi §3). La formula è centralizzata nel metodo statico
+  `Tek822Decoder.computeDeclaredBodyLength(byte[])` per non duplicarla nei consumer.
+  > **Caveat storico**: il PDF v1.21 cita erroneamente "Bit5&Bit4 of byte 15", ma quei bit
+  > fanno parte del Message Type (msgType usa bits[5:0]); la formula coerente con i message
+  > type 16/17 (che usano bit 4) usa **bits[7:6]**. Bug fixato — vedi `Tek822DecoderTest.declaredBodyLength_msgType16_noShiftConflict`.
 
 Cfr. [diagrammi/protocollo-tek822-struttura-messaggio.mmd](diagrammi/protocollo-tek822-struttura-messaggio.mmd).
 
@@ -66,9 +71,9 @@ Lo stesso layout vale per *ogni* tipo di messaggio.
 
 | Offset | Nome | Decodifica | Esempio |
 |---|---|---|---|
-| 0 | Product Type | `0x08`=TEK822 V1, `0x17`=TEK822 V1 BTN, `0x18`=TEK822 V2 NB | `0x18` |
-| 1 | HW Revision | bits[7:3] major, bits[2:0] minor | `0x02` → BG95 |
-| 2 | FW Revision | bits[7:3] major, bits[2:0] minor | `0xC4` → FW 4.6 |
+| 0 | Product Type | `0x08`=TEK822 V1, `0x17`=TEK822 V1 BTN, `0x18`=TEK822 V2 NB. Modem dedotto dal byte 1 | `0x18` → "TEK822 V2 NB" |
+| 1 | HW Revision | bits[2:0] = minor, bits[7:3] = major. Display: "minor.major". Modem da major: 0=BG96, 1=BG95 | `0x02` → "2.0" + "BG96" |
+| 2 | FW Revision | bits[4:0] = FW Major, bits[7:5] = FW Minor. Display: "FW major.minor" | `0xC4` → "FW 4.6"; `0x82` → "FW 2.4" |
 | 3 | **Contact Reason** | bitmask, vedi §3.1 | `0x41` → Scheduled + DynLim |
 | 4 | **Alarm/Status** | bitmask, vedi §3.2 | `0x89` → Active + Bund + Limit 1 |
 | 5 | CSQ / RSSI | intero unsigned 0–31 | `0x19` → 25 |
@@ -183,7 +188,7 @@ distance = ((data[j+2] & 0x03) << 8) | (data[j+3] & 0xFF)   // range 0–1023
 > - bit 7 = 0, bit 6 = 0 → percentuale bassa risoluzione 0–100
 >
 > Per applicazioni LPG tank è tipicamente **percentuale**, non centimetri. Il nome
-> `distance_cm` nel decoder è in attesa di rinomina (vedi `project_tek822_spec_compliance`).
+> `distance_cm` nel decoder è in attesa di rinomina (vedi [bug-aperti.md](bug-aperti.md) §1).
 
 Una misura con tutti e 4 i byte a `0x00` è uno **slot vuoto** — il decoder la salta.
 
@@ -218,7 +223,7 @@ S15=84.51.250.104,S16=9000,S17=7200,S18=C8,S19=00,S20=00,S21=,S22=,
 S23=13,S24=00,S25=00,S26=10
 ```
 
-**Regola fondamentale di decodifica**: i valori sono **in esadecimale**, non in decimale.
+**Regola fondamentale di decodifica**: i valori dei registri "numerici" sono **in esadecimale**, non in decimale.
 
 | Setting | Valore stringa | Decodifica corretta |
 |---|---|---|
@@ -226,9 +231,18 @@ S23=13,S24=00,S25=00,S26=10
 | `S2=7F0038` | `"7F0038"` | `0x7F0038` = **8 323 128** (multi-byte: giorni settimana + ora) |
 | `S22=181A` | `"181A"` | `0x181A` = **6170** (LTE band code) |
 
-I registri **ASCII puri** (`S9` numero telefono, `S11` password, `S12–S15` APN/IP/URL) non
-sono numericamente parsabili come hex (contengono `.`, `+`, lettere fuori `0-9A-F`) e vengono
-saltati dal decoder, restando comunque visibili nel log.
+**Strategia di preservazione**: il decoder emette **una `Measure` per ogni `Sx=value`** trovato,
+indipendentemente dal tipo. Pattern:
+
+| Tipo di registro | Esempio | `value` | `unit` |
+|---|---|---|---|
+| Hex-parseable | `S0=81` | `129` (`0x81`) | `"81"` (raw hex string) |
+| ASCII non-hex | `S12=iot.1nce.net` | `0` | `"iot.1nce.net"` |
+| Vuoto | `S9=` | `0` | `""` |
+
+Risultato: tutti i 30 registri (S0..S29) di un dump risposta a `R1=02` finiscono in `device_measures`
+con obisCode `setting.S0` ... `setting.S29`. Nessuna perdita di info — anche APN, IP, password
+restano queryable via SQL (filtrando `WHERE obis_code = 'setting.S12'`).
 
 > **CRC trailer**: anche per Msg #6 gli ultimi 2 byte del payload sono il CRC, **fuori** dal body
 > ASCII. Il decoder lo esclude correttamente prima di parsare la stringa.
@@ -244,20 +258,24 @@ Esempio decodificato:
 ,89882390000028895236,19875,38,40,13612,0,91131,18004,12,240619,14360,28
 ```
 
-| Pos | Campo | Unità |
-|---|---|---|
-| 0 | ICCID | stringa numerica 20 cifre |
-| 1 | Energy Used to Date | mA·minuti |
-| 2 | Min Temp | °C |
-| 3 | Max Temp | °C |
-| 4 | Message Count | — |
-| 5 | Count of Delivery Fail | — |
-| 6 | Total Send Time | secondi |
-| 7 | Max Send Time | secondi |
-| 8 | Min Send Time | secondi |
-| 9 | RSSI Total | — (per media: `total / valid_count`) |
-| 10 | RSSI Valid Readings | — |
-| 11 | RSSI Failed Readings | — |
+Il decoder emette **tutti e 12 i campi** come `Measure` (prima del fix Msg#16 ne emetteva 7).
+ICCID è una stringa numerica a 20 cifre, non rappresentabile in `double` senza perdita di precisione,
+quindi viene preservata in `unit` (con `value = 0`) come per i setting ASCII.
+
+| Pos | Campo | obisCode emesso | Unità | Note |
+|---|---|---|---|---|
+| 0 | ICCID | `stats.iccid` | (string in `unit`) | 20 cifre, non-numeric |
+| 1 | Energy Used to Date | `stats.energy_used_ma_minutes` | mA·min | rinominato (era `_mah` sbagliato) |
+| 2 | Min Temp | `stats.min_temperature_c` | °C | — |
+| 3 | Max Temp | `stats.max_temperature_c` | °C | — |
+| 4 | Message Count | `stats.message_count` | — | counter cumulativo |
+| 5 | Count of Delivery Fail | `stats.delivery_fail` | — | — |
+| 6 | Total Send Time | `stats.total_send_time_s` | s | per media: `total / message_count` |
+| 7 | Max Send Time | `stats.max_send_time_s` | s | — |
+| 8 | Min Send Time | `stats.min_send_time_s` | s | — |
+| 9 | RSSI Total | `stats.rssi_total` | — | per media: `total / rssi_valid_count` |
+| 10 | RSSI Valid Readings | `stats.rssi_valid_count` | — | — |
+| 11 | RSSI Failed Readings | `stats.rssi_fail_count` | — | — |
 
 ---
 
@@ -268,20 +286,24 @@ Body ASCII analogo al #16. Esempio:
 ,95,134442.0,5255.9950N,00832.4417W,1.9,127.8,2,0.00,0.0,0.0,021015,04
 ```
 
-| Pos | Campo | Formato |
-|---|---|---|
-| 0 | GPS Time to Fix | secondi |
-| 1 | UTC time | `hhmmss.s` |
-| 2 | Latitude | `ddmm.mmmm N\|S` (NMEA) |
-| 3 | Longitude | `dddmm.mmmm E\|W` (NMEA) |
-| 4 | Horizontal precision | 0.5–99.9 |
-| 5 | Altitude | metri |
-| 6 | GNSS positioning mode | 2 = 2D, 3 = 3D |
-| 7 | Ground heading | `ddd.mm` (gradi nord-vero) |
-| 8 | Speed over ground | km/h |
-| 9 | Speed over ground | nodi |
-| 10 | Date | `ddmmyy` |
-| 11 | Numero satelliti | 00–12 |
+Il decoder emette **tutti e 12 i campi** come `Measure` (prima del fix Msg#17 ne emetteva 4).
+Le coordinate sono in formato NMEA (gradi-minuti decimali con suffisso N/S/E/W) e non sono
+rappresentabili come `double` → preservate in `unit` con `value=0`. Stesso pattern per UTC e Date.
+
+| Pos | Campo | obisCode emesso | Tipo | Esempio |
+|---|---|---|---|---|
+| 0 | GPS Time to Fix | `gps.time_to_fix_s` | numeric (s) | `95` |
+| 1 | UTC time | `gps.utc` | string in `unit` | `"134442.0"` (`hhmmss.s`) |
+| 2 | Latitude | `gps.latitude` | string in `unit` | `"5255.9950N"` (NMEA `ddmm.mmmm N\|S`) |
+| 3 | Longitude | `gps.longitude` | string in `unit` | `"00832.4417W"` (NMEA `dddmm.mmmm E\|W`) |
+| 4 | Horizontal precision (HDOP) | `gps.hdop` | numeric (0.5-99.9) | `1.9` |
+| 5 | Altitude | `gps.altitude_m` | numeric (m) | `127.8` |
+| 6 | GNSS positioning mode | `gps.fix_mode` | numeric | `2` = 2D, `3` = 3D |
+| 7 | Ground heading | `gps.heading_deg` | numeric (°) | `0.00` |
+| 8 | Speed over ground (km/h) | `gps.speed_kmh` | numeric (km/h) | `0.0` |
+| 9 | Speed over ground (nodi) | `gps.speed_knots` | numeric (knots) | `0.0` |
+| 10 | Date | `gps.date` | string in `unit` | `"021015"` (`ddmmyy`) |
+| 11 | Numero satelliti | `gps.satellites` | numeric (0-12) | `4` |
 
 ---
 
@@ -306,11 +328,18 @@ Il decoder genera un `Alarm` distinto per ciascun bit del byte 4:
 | 3 | `DEVICE_BUND_STATUS` | switch hardware |
 | 7 | nessuno (Active = info, non allarme) | — |
 
-Inoltre il byte 3 e il byte 4 sono esposti come `Measure` diagnostiche:
-- `contact_reason_flags` = `byte3 & 0xFF`
-- `alarm_status_flags` = `byte4 & 0xFF`
+> **Comportamento globale per tipo di messaggio**: la generazione di questi allarmi e l'estrazione
+> di `contact_reason_flags`/`alarm_status_flags` avvengono in `Tek822Decoder.doDecode` **prima del
+> dispatcher per Msg type**. Pertanto un byte 4 con bit settati produce `Alarm` anche su Msg #6 /
+> #16 / #17 — l'header byte 0-6 è condiviso.
 
-per consentire analisi a posteriori delle bitmask.
+Per analisi a posteriori delle bitmask sono esposti come `Measure` diagnostiche:
+- `contact_reason_flags` = `byte3 & 0xFF` (valore decimale)
+- `alarm_status_flags` = `byte4 & 0xFF` (valore decimale)
+
+Inoltre il modulo `FlagDecoder` (in `decoder.impl`) traduce le due bitmask in liste di label
+umani (es. `byte 0x89` → `["Limit1", "Bund", "Active"]`). Le liste sono esposte dal decode-tool
+nella response REST (`contactReasonFlags`, `alarmStatusFlags`).
 
 > **Importante**: questi allarmi non dipendono dalla nostra configurazione server-side, ma dalle
 > soglie effettivamente settate sui registri del device (interrogabili via Msg #6). Possono essere
@@ -483,3 +512,141 @@ Quando un operatore avvicina un magnete al "hot spot" del device:
 - Mapping firmware-revisione/contact-reason/alarm-status: XLSM sheet `822` (R0011–R0027).
 - Lookup tabella LTE Band: PDF §3.20.12.
 - Lista comandi completa: XLSM sheet `Request Commands`.
+
+---
+
+## 8. Catalogo degli obisCode emessi dal decoder
+
+Tabella sinottica di tutti i codici `Measure.obisCode` prodotti da `Tek822Decoder`, raggruppati
+per tipo di messaggio. Utile come riferimento per query SQL su `device_measures`.
+
+### 8.1 Common (per QUALSIASI tipo di messaggio)
+
+Estratti da `decodeHeaderDiagnostics()` + flags da byte 3/4 in `Tek822Decoder.doDecode`,
+**prima** del dispatcher per Msg type. Per Msg #4/#8/#9 il timestamp è ricostruito dal RTC del
+device; per Msg #6/#16/#17 è il server time alla decodifica.
+
+| obisCode | Tipo | Sorgente | Note |
+|---|---|---|---|
+| `header.product_type` | int | byte 0 | unit = label (es. `"TEK822 V2 NB"`) |
+| `header.hw_revision` | double | byte 1 | display "minor.major" (es. `2.0`), unit = modem label (`"BG96"` o `"BG95"`) |
+| `header.fw_revision` | double | byte 2 | display "major.minor" (es. `3.0`), unit = `"FW major.minor"` |
+| `header.gsm_rssi` | int 0-31 | byte 5 | — |
+| `header.battery_percent` | double 0-100 | byte 6 bits[4:0] | unit = `"% Capacity Remaining"`, 2 decimali |
+| `header.rtc_set` | 0/1 | byte 6 bit 5 | — |
+| `header.lte_active` | 0/1 | byte 6 bit 6 | 1 = LTE/CAT-M registrato, 0 = 2G |
+| `contact_reason_flags` | int 0-255 | byte 3 | bitmask raw (decoder per label: `FlagDecoder.contactReasonFlags`) |
+| `alarm_status_flags` | int 0-255 | byte 4 | bitmask raw (decoder per label: `FlagDecoder.alarmStatusFlags`) |
+
+### 8.2 Aggiuntivi per Msg #4/#8/#9 (binary measures)
+
+| obisCode | Tipo | Sorgente | Note |
+|---|---|---|---|
+| `header.message_count` | int | byte 17-18 BE | counter cumulativo del device |
+| `header.try_tickets_remaining` | int 0-7 | byte 19 bits[7:5] | retry rimanenti per la trasmissione corrente |
+| `header.energy_used_mah` | int | byte 20-21 BE | FW > 3.0 (legacy: era "last error code") |
+| `network.tech_code` | 0/1/2 | byte 22 bit 7 + byte 6 bit 6 | unit = `"GSM"` / `"CATM"` / `"NB"` |
+| `network.mnc` | int 0-15 | byte 22 bits[3:0] | network operator short code |
+| `network.login_time_s` | int | byte 24 × 5 | secondi di connessione |
+| `distance_cm` | int 0-1023 | byte (26+i·4)+2 bits[1:0] + byte +3 | **nome storico**, unità reale dipende da S26 |
+| `temperature_c` | double | byte (26+i·4)+1 / 2 − 30 | range −30…+97.5 °C |
+| `aux1` | int 0-15 | byte (26+i·4)+2 bits[5:2] | sanity check (atteso 10) |
+| `aux2` | int 0-255 | byte (26+i·4) | sanity check (atteso 10) |
+
+Per ogni slot non vuoto si emettono 4 measure con lo **stesso timestamp** = `baseTimestamp − i × loggerSpeed`.
+
+### 8.3 Aggiuntivi per Msg #6 (settings dump)
+
+Un `Measure` per **ogni** `Sx=value` trovato nel body ASCII (anche se vuoto o ASCII):
+
+| obisCode | Tipo | Convenzione |
+|---|---|---|
+| `setting.S0` … `setting.S29` | double | `value` = `Long.parseLong(raw, 16)` se hex-parseable, `0.0` altrimenti. `unit` = stringa raw originale (es. `"81"`, `"iot.1nce.net"`, `""`) |
+
+### 8.4 Aggiuntivi per Msg #16 (statistics)
+
+Vedi §4.3 per il dettaglio. obisCode: `stats.iccid`, `stats.energy_used_ma_minutes`,
+`stats.min_temperature_c`, `stats.max_temperature_c`, `stats.message_count`,
+`stats.delivery_fail`, `stats.total_send_time_s`, `stats.max_send_time_s`,
+`stats.min_send_time_s`, `stats.rssi_total`, `stats.rssi_valid_count`, `stats.rssi_fail_count`.
+
+### 8.5 Aggiuntivi per Msg #17 (GPS)
+
+Vedi §4.4 per il dettaglio. obisCode: `gps.time_to_fix_s`, `gps.utc`, `gps.latitude`,
+`gps.longitude`, `gps.hdop`, `gps.altitude_m`, `gps.fix_mode`, `gps.heading_deg`,
+`gps.speed_kmh`, `gps.speed_knots`, `gps.date`, `gps.satellites`.
+
+### 8.6 Alarm codes prodotti
+
+| alarmCode | Sorgente | Quando |
+|---|---|---|
+| `DEVICE_LIMIT_1` | byte 4 bit 0 | superamento soglia S4 (lato device) |
+| `DEVICE_LIMIT_2` | byte 4 bit 1 | superamento soglia S5 |
+| `DEVICE_LIMIT_3` | byte 4 bit 2 | superamento soglia S6 |
+| `DEVICE_BUND_STATUS` | byte 4 bit 3 | switch hardware bund attivato |
+| `TANK_LEVEL_LOW` | server-side AlarmRule | `distance_cm < alarm.tank.low_threshold` (config) |
+| `TANK_LEVEL_HIGH` | server-side AlarmRule | `distance_cm > alarm.tank.high_threshold` |
+| `BATTERY_LOW` | server-side AlarmRule | (richiede `battery_voltage` non ancora estratto) |
+| `TEMPERATURE_OUT_OF_RANGE` | server-side AlarmRule | fuori `[min, max]` config |
+| `MISSED_TRANSMISSION` | scheduler `MissedTransmissionDetector` | `now − lastTimestamp > soglia` (default 24h) |
+
+---
+
+## 9. Modulo `gas-telemetry-decode-tool`
+
+Modulo Spring Boot creato come **ausilio di debugging**. Non fa parte della pipeline di produzione:
+permette di incollare una stringa hex di payload TEK822 e visualizzare la decodifica completa
+nel browser, con byte sorgente per ogni campo. Utile per troubleshooting on-the-fly e per il
+confronto byte-per-byte rispetto allo sheet "822" dell'XLSM di riferimento.
+
+### 9.1 Principio architetturale
+
+**Decoder = protocol knowledge, decode-tool = solo ausilio**:
+- Tutta la conoscenza di protocollo (formule, bit positions, mapping byte→label) vive nel modulo
+  `gas-telemetry-decoder` (`Tek822Decoder`, `FlagDecoder`, `AlarmCodes`).
+- Il decode-tool importa `Tek822Decoder` come dipendenza Maven (con `<exclusion>` su JPA /
+  Event Hub / persistence per non tirare dentro tutte le transitive) e lo invoca con un
+  `InMemoryDecoderContext` che cattura il `DecodedPacket` invece di pubblicarlo.
+
+### 9.2 Endpoint REST
+
+```
+POST http://localhost:8095/api/decode
+Content-Type: application/json
+
+{ "hex": "180203418919360864431047987054047B..." }
+```
+
+Risposta JSON: `DecodeResponse` con `deviceId` (IMEI), `messageType`, `declaredBodyLength`,
+`contactReasonFlags`/`alarmStatusFlags` (array di label da `FlagDecoder`), array `measures` e
+`alarms`. Ogni measure/alarm è arricchito con `sourceHex` (byte hex sorgente) e `byteRange`
+(formato `"N"` o `"N-M"`).
+
+### 9.3 UI web
+
+Pagina HTML statica a `http://localhost:8095/` con textarea per il payload + 4 tabelle di
+risultato: Header / Allarmi auto-segnalati / Diagnostica header / Misure time-series. Ogni
+tabella ha colonne `Hex` e `Byte` come prime due — match diretto con l'XLSM (cella H1 / A187).
+
+### 9.4 Classi chiave
+
+| Classe | Responsabilità |
+|---|---|
+| `DecodeToolApplication` | entry point Spring Boot, porta 8095 |
+| `DecoderBeansConfig` | espone `Tek822Decoder` come `@Bean` (no component-scan del modulo decoder) |
+| `service.PayloadParser` | hex → byte[], IMEI BCD raw |
+| `service.InMemoryDecoderContext` | cattura il `DecodedPacket` |
+| `service.HexSlicer` | mappa obisCode → (offset, length) per generare `sourceHex` + `byteRange` |
+| `rest.DecodeController` | endpoint REST |
+| `rest.DecodeRequest/Response/MeasureView/AlarmView` | DTO |
+| `static/index.html` | UI single-page, fetch + render |
+
+### 9.5 Test di "coperture" anti-regressione
+
+- `HexSlicerCoverageTest` — verifica che ogni `Measure`/`Alarm` prodotto dal decoder abbia
+  un mapping in `HexSlicer.FIXED_OFFSETS` (per le measure header) o in `slotMeasureSlice`
+  (per le measure per-slot). Se domani qualcuno aggiunge una `Measure` nel decoder senza
+  estendere il mapping, la build fallisce con l'elenco dei codici scoperti.
+- `FlagDecoderTest` — pin del bit→label per Contact Reason e Alarm Status.
+- `Tek822DecoderTest.realPayload_*` — test integrati su payload reali XLSM (Msg #4, #6, #16, #17),
+  pattern da riusare per nuovi tipi di messaggio.
