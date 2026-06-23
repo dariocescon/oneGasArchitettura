@@ -1,0 +1,74 @@
+%% Diagramma struttura messaggio TEK822
+%% Mostra il layout dei byte per ognuno dei 7 tipi di messaggio possibili,
+%% evidenziando l'header comune di 17 byte e i body variabili.
+
+flowchart TB
+    Payload["Payload TCP/UDP grezzo<br/>byte[N]"]
+
+    subgraph Header ["Header comune (byte 0-16)"]
+        direction LR
+        B0["byte 0<br/>Product Type"]
+        B1["byte 1<br/>HW Rev"]
+        B2["byte 2<br/>FW Rev"]
+        B3["byte 3<br/>Contact Reason<br/>(bitmask)"]
+        B4["byte 4<br/>Alarm/Status<br/>(bitmask)"]
+        B5["byte 5<br/>CSQ"]
+        B6["byte 6<br/>Battery + Flag"]
+        B714["byte 7-14<br/>IMEI (8 byte BCD)"]
+        B15["byte 15<br/>Msg Type<br/>+ length hi"]
+        B16["byte 16<br/>length lo"]
+    end
+
+    Payload --> Header
+    Header --> Dispatcher{"Msg Type<br/>(byte 15 bits 5:0)"}
+
+    Dispatcher -->|"#4 / #8 / #9"| BodyBinary
+    Dispatcher -->|"#6 / #16 / #17 / #2"| BodyAscii
+
+    subgraph BodyBinary ["Body binario (misure)"]
+        direction TB
+        BB1718["byte 17-18: Message Count (uint16 BE)"]
+        BB19["byte 19: TryTickets[7:5] + RTC Hours[4:0]"]
+        BB2021["byte 20-21: Energy Used mAh"]
+        BB22["byte 22: Network Tech (NB-IoT / CAT-M / 2G)"]
+        BB23["byte 23: Logger Speed (formula 3 casi)"]
+        BB24["byte 24: Login Time (× 5 sec)"]
+        BB25["byte 25: RTC Minutes"]
+        BB26["byte 26+: Data 0 ... Data 27<br/>(28 slot × 4 byte ciascuno)"]
+        BB1718 --> BB19 --> BB2021 --> BB22 --> BB23 --> BB24 --> BB25 --> BB26
+    end
+
+    subgraph SingleMeasure ["Singolo slot misura (4 byte)"]
+        direction LR
+        M0["+0<br/>Aux2 (=10)"]
+        M1["+1<br/>Temp raw<br/>°C = b/2 - 30"]
+        M2["+2<br/>Aux1[5:2] (=10)<br/>+ Dist hi[1:0]"]
+        M3["+3<br/>Dist lo<br/>0..1023 = (hi<<8)|lo"]
+    end
+
+    BB26 -.->|"per ogni slot"| SingleMeasure
+
+    subgraph BodyAscii ["Body ASCII"]
+        direction TB
+        BA["byte 17 ... N-3<br/>caratteri ASCII US"]
+        BA6["Msg #6: 'S0=80,S2=7F2000,...' (HEX!)"]
+        BA16["Msg #16: ',ICCID,energy,minT,maxT,...' (CSV)"]
+        BA17["Msg #17: ',timeToFix,UTC,lat,lon,alt,...' (CSV)"]
+        BA --> BA6
+        BA --> BA16
+        BA --> BA17
+    end
+
+    BodyBinary --> CRC
+    BodyAscii --> CRC
+    CRC["Ultimi 2 byte: CRC<br/>(polinomio non documentato,<br/>NON validato)"]
+
+    classDef header fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
+    classDef body fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef alarm fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef crc fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+
+    class Header,B0,B1,B2,B5,B6,B714,B15,B16 header
+    class B3,B4 alarm
+    class BodyBinary,BodyAscii,SingleMeasure,BB1718,BB19,BB2021,BB22,BB23,BB24,BB25,BB26,BA,BA6,BA16,BA17,M0,M1,M2,M3 body
+    class CRC crc

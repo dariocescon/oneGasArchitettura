@@ -1,0 +1,80 @@
+%% Diagramma flusso decodifica TEK822
+%% Mostra il routing dei messaggi in arrivo per tipo, la generazione di Measure
+%% e la generazione di Alarm (sia auto-segnalati dal device sia server-side).
+
+flowchart TB
+    Start(["Payload TEK822 in arrivo<br/>dal Worker"])
+
+    Start --> CheckLen{"data.length<br/>>= 17?"}
+    CheckLen -->|"NO"| Discard["Scarta + warn"]
+    CheckLen -->|"SI"| ReadType["Estrai msgType<br/>= data[15] & 0x3F"]
+
+    ReadType --> Switch{"msgType<br/>?"}
+
+    Switch -->|"4, 8, 9"| DecodeMeasures
+    Switch -->|"6"| DecodeSettings
+    Switch -->|"16"| DecodeStats
+    Switch -->|"17"| DecodeGps
+    Switch -->|"altri (2, ...)"| Unknown["Log warning<br/>+ DecodedPacket vuoto"]
+
+    subgraph DecodeMeasures ["Decodifica misure (Msg 4/8/9)"]
+        direction TB
+        DM1["Ricostruisci timestamp base<br/>da RTC (byte 19+25) + server date<br/>(con midnight wrap)"]
+        DM2["Calcola loggerSpeed<br/>dal byte 23"]
+        DM3["Estrai diagnostica rete<br/>(byte 22, 24)"]
+        DM3b["Estrai byte 3 (ContactReason)<br/>+ byte 4 (AlarmStatus)<br/>come Measure diagnostiche"]
+        DM4["Genera Alarm device<br/>dai bit del byte 4:<br/>Limit1/2/3, Bund"]
+        DM5["Per ogni slot 26+i*4:<br/>se != 0x00000000<br/>estrai dist, temp, aux1, aux2"]
+        DM6["Applica AlarmRule server-side<br/>(TankLow, TankHigh, Battery, Temp)"]
+        DM1 --> DM2 --> DM3 --> DM3b --> DM4 --> DM5 --> DM6
+    end
+
+    subgraph DecodeSettings ["Decodifica settings (Msg 6)"]
+        direction TB
+        DS1["Estrai ASCII payload<br/>(byte 17 fino a N-3,<br/>esclude CRC trailer)"]
+        DS2["Split per ','<br/>per ogni 'Sx=value'..."]
+        DS3["Parse value come HEX<br/>(Long.parseLong base 16)<br/>NB: non decimale!"]
+        DS4["ASCII puri (APN/IP/password)<br/>falliscono parse hex<br/>=> saltati silenziosamente"]
+        DS1 --> DS2 --> DS3 --> DS4
+    end
+
+    subgraph DecodeStats ["Decodifica statistiche (Msg 16)"]
+        direction TB
+        DT1["Estrai ASCII payload"]
+        DT2["Split CSV"]
+        DT3["12 campi attesi:<br/>ICCID, energy, minT, maxT,<br/>msgCount, failCount,<br/>sendTimes, RSSI"]
+        DT1 --> DT2 --> DT3
+    end
+
+    subgraph DecodeGps ["Decodifica GPS (Msg 17)"]
+        direction TB
+        DG1["Estrai ASCII payload"]
+        DG2["Split CSV"]
+        DG3["12 campi attesi:<br/>timeToFix, UTC, lat, lon,<br/>alt, mode, speed, date, sat"]
+        DG1 --> DG2 --> DG3
+    end
+
+    DecodeMeasures --> Publish
+    DecodeSettings --> Publish
+    DecodeStats --> Publish
+    DecodeGps --> Publish
+
+    Publish["publishDecodedData(deviceId,<br/>DecodedPacket(measures, alarms))"]
+    Publish --> TS["Persistenza<br/>TimescaleDB:<br/>device_measures<br/>device_alarms"]
+
+    Scheduler[/"MissedTransmissionDetector<br/>@Scheduled (5 min)"/]
+    Scheduler --> MT{"now - lastTs<br/>> soglia?"}
+    MT -->|"SI<br/>(no duplicate)"| MTAlarm["Alarm<br/>MISSED_TRANSMISSION"]
+    MTAlarm --> TS
+
+    classDef start fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef decode fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    classDef alarm fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef persist fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef error fill:#fafafa,stroke:#616161,stroke-width:1px,stroke-dasharray:5
+
+    class Start start
+    class DecodeMeasures,DecodeSettings,DecodeStats,DecodeGps,DM1,DM2,DM3,DM3b,DM5,DS1,DS2,DS3,DS4,DT1,DT2,DT3,DG1,DG2,DG3 decode
+    class DM4,DM6,Scheduler,MT,MTAlarm alarm
+    class Publish,TS persist
+    class Discard,Unknown error

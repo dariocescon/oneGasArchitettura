@@ -1,0 +1,1362 @@
+Logger LTE
+User Manual
+Logger NB-IoT/CAT-M1 User Manual
+
+    Contents
+
+1.        Product Description............................................................................................................................................................................... 2
+
+    1.1            Abbreviations/Definitions ....................................................................................................................................................... 2
+
+2.        Configuring Device ................................................................................................................................................................................ 3
+
+    2.1            Network Server Response ....................................................................................................................................................... 3
+
+    2.2            Message Types ........................................................................................................................................................................ 3
+
+          2.2.1    Header Message .............................................................................................................................................................. 4
+
+          2.2.2    Message Type 4, 8 & 9 ..................................................................................................................................................... 6
+
+          2.2.3    Message Type 6 ............................................................................................................................................................... 8
+
+          2.2.4    Message Type 16 ............................................................................................................................................................. 9
+
+          2.2.1    Message Type 17 ........................................................................................................................................................... 10
+
+3.        Description of Data Transmission ........................................................................................................................................................ 11
+
+    3.1            S-Parameters (Settings) ......................................................................................................................................................... 11
+
+    3.2            Data recording ­ S0 ............................................................................................................................................................... 12
+
+    3.3            Listen time ­ S1 ..................................................................................................................................................................... 12
+
+    3.4            Schedule configurator ­ S2.................................................................................................................................................... 12
+
+    3.5            Communication channels ­ S3 & S26 .................................................................................................................................... 12
+
+    3.6            CRC checking ­ S3 ................................................................................................................................................................. 12
+
+    3.7            Alarms ­ S4, S5, S6, S7 & S8 .................................................................................................................................................. 13
+
+    3.8            Standard communications ­ S9, S10, S12, S13, S14,S15 & S16 .............................................................................................. 13
+
+    3.9            System password ­ S11 ......................................................................................................................................................... 13
+
+    3.10           Battery capacity in mA hrs ­ S17 ........................................................................................................................................... 13
+
+    3.11           F-Stop (Force Stop) ­ S18 ...................................................................................................................................................... 13
+
+    3.12           Control3 Configurator ­ S19 .................................................................................................................................................. 13
+
+    3.13           E-Stop (Empty output voltage) ­ S20..................................................................................................................................... 14
+
+    3.14           Retry configurator ­ S23 ....................................................................................................................................................... 14
+
+    3.15           Schedule delay ­ S24............................................................................................................................................................. 14
+
+    3.16           Control2 configurator ­ S26 .................................................................................................................................................. 14
+
+    3.17           Dynamic Alarm 1 Offset Timer ­ S29 ..................................................................................................................................... 14
+
+    3.18           Long Timeframe Retry ­ S29 ................................................................................................................................................. 15
+
+    3.19           Manual wakeup .................................................................................................................................................................... 15
+
+    3.20           Configuration Commands...................................................................................................................................................... 16
+
+          3.20.1   S0: Logger Configuration ............................................................................................................................................ 16
+
+          3.20.2   S1: Listen Configuration.............................................................................................................................................. 16
+
+          3.20.3   S2: Schedule Configuration......................................................................................................................................... 17
+
+          3.20.4   S3: Control Configuration ........................................................................................................................................... 18
+
+          3.20.5   S4, S5, S6: Static Limit Configuration .......................................................................................................................... 18
+
+          3.20.6   S7, S8: Dynamic Limit Configuration ........................................................................................................................... 19
+
+          3.20.7   S9 ­ S17: SMS, APN, URL and Tank Details Configuration ........................................................................................... 19
+
+          3.20.8   S18: F-Stop ................................................................................................................................................................. 20
+
+          3.20.9   S19: Control3 Configurator ......................................................................................................................................... 20
+
+          3.20.10  S20: E-Stop........................................................................................................................................................... 20
+
+          3.20.11  S21 MCC_MNC Mobile Country Code / Operator Code........................................................................................ 20
+
+          3.20.12  S22 LTE Band........................................................................................................................................................ 21
+
+          3.20.13  S23: Message Deliver Configuration..................................................................................................................... 21
+
+          3.20.14  S24: Schedule Delay ............................................................................................................................................. 21
+
+          3.20.15  S26: Control2 Configuration................................................................................................................................. 22
+
+          3.20.16  S29: Control4 Configuration................................................................................................................................. 22
+
+    3.21           Request commands............................................................................................................................................................... 23
+
+    3.22           SMS text back........................................................................................................................................................................ 23
+
+4.        Technical Specification ........................................................................................................................................................................ 24
+
+    4.1            Reed switch interface............................................................................................................................................................ 24
+
+    4.2            Buzzer ................................................................................................................................................................................... 24
+
+    4.3            TSP Interface ......................................................................................................................................................................... 24
+
+    4.4            Connectivity .......................................................................................................................................................................... 24
+
+5.        On-site Maintenance Checks ............................................................................................................................................................... 24
+
+    5.1            Mounting .............................................................................................................................................................................. 24
+
+    5.2            Environment ......................................................................................................................................................................... 24
+
+    5.3            Cleaning ................................................................................................................................................................................ 24
+
+6.        Trouble Shooting ................................................................................................................................................................................. 25
+
+    6.1            Beep Pattern ......................................................................................................................................................................... 25
+
+9-5988-07
+
+1|P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+1. Product Description
+The 4G NB-IoT/CAT-M1 logger is a flexible and configurable battery-operated, ATEX certified multipurpose data
+logger, suitable for monitoring fuel tanks levels and flow rates.
+The logger contains an integrated cellular modem supporting (2G), LTE-CAT M1 & NB-IoT networks which
+communicates data in a binary message to a remote server via a TCP connection.
+The logger contains an internal temperature logger which measures the temperature and a reed switch for
+activation and initiating manual measurements.
+
+             1.1 Abbreviations/Definitions
+
+The following is a list of terms that may be found in this document.
+
+RSSI         Received Signal Strength Indicator
+
+CRC          Cyclic Redundancy Check
+
+RTC          Real Time Clock
+
+HW           Hardware
+
+FW           Firmware
+
+Ack          Acknowledgement from the network server
+
+Message      The data packet / payload / datagram sent across the network
+
+MSB          The Most Significant Bit is the left-most bit in the string
+
+Payload      Data transmitted between logger and network
+
+0x           Identifies the number as hexadecimal. Note: numbers are assumed decimal unless specified otherwise.
+
+0b           Identifies the number as binary. Note: numbers are assumed decimal unless specified otherwise.
+
+Unsigned byte Will only allow you to represent numbers in the positive range
+
+Signed byte  Will allow you to represent numbers both in the positive and negative ranges
+
+IoT          Internet of Things
+
+Dormant      Dormant units are inactivated to ensure the longest battery service life
+
+POR          Power Out Reset
+
+BOR          Brown Out Reset
+
+2|P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+2. Configuring Device
+
+             2.1 Network Server Response
+
+Every time a logger makes an outgoing status connection to the gateway, the network server has the option to
+respond with configuration settings to alter the operation of the device.
+Sending responses to the logger is very useful for tasks such as changing the connection schedule. Care must be
+taken, as sending the wrong settings could render the device incapable of correct operation.
+
+             2.2 Message Types
+The logger transmits or receives several packet types.
+
+The standard message is referred to as a message type 4 and is transmitted based on a schedule defined by S2
+Schedule Configurator register.
+
+For message type 4, the unit transmits only the updates to the 28-position log i.e., only those values that have
+changed since the last transmission.
+
+In the event of an alarm condition, the unit transmits a message type 8 which transmits the contents of the faster
+buffer log as this is the data that will have triggered the alarm.
+
+   Message Type Description
+
+Message 4   Standard results from logger. (Most common Message type)
+            The scheduled data upload is referred to as a message type 4 and will contain new logging buffer values since
+            the last schedule upload, along with additional information.
+
+Message 6   Logger Settings.
+            A message type 6 can be requested from the logger with the command R1=02, R1 = 04 or R1 = 08. A message
+            type sends the contents of the S registers (and may be truncated to 140 bytes if configured to send data via
+            SMS). The response to R1=02 is the settings starting from S0, R1=04 is the settings starting from S12 and
+            R1=08 is the settings starting from S19.
+
+Message 8   Similar to message 4 with alarms or logger waking up.
+Message 9   A message 8 is transmitted when an alarm is activated or when the logger is activated with a magnet. A
+Message 16  message type 8 contains the measurement values contained in the sampling buffer (because these are the
+            values used to trigger the alarm). The exception to this is a no change alarm in which case a message type 4 is
+            transmitted (with the logger buffer values as those are the data points used for that particular alarm).
+
+            Similar to message 4 with alarms.
+            A message 9 is transmitted when a predefined offset time (S29) has passed after the dynamic alarm 1 (S7)
+            was triggered. A message type 9 contains the ullage values from the sampling buffer. It can be useful for
+            analysing filling and emptying events.
+
+            ICCID and modem information.
+            A message type 16 is sent to the server when the command R6=02 is received by the logger. This message
+            type also contains additional status information.
+
+Message 17  GPS information.
+            A message type 17 is sent to the server when the command R7=FF is received by the logger. FF = timeout
+            (Hex, seconds). This message type also contains additional status information. NOTE: From firmware v4.2 and
+            succeeding versions, when message 17 is requested, the unit closes temporarily the TCP-IP connection. Once
+            the GPS data is collected or the timeout occurs, a new connection is established delivering message type 17.
+
+3|P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+             2.2.1 Header Message
+
+The header of the message is always the same for all message types up to byte 16.
+The following table contains the 16-byte header message.
+*Please note that all Hexadecimal entries require CAPITAL lettering.
+
+                2.2.1.1           Product ID reference
+
+                *See 9-5965 Product ID reference document
+
+Byte 15 highlights the message type and therefore how to interpret the rest of the message.
+
+Sample Payload: (Payloads are Hexadecimal)
+080181048614750861075021004551047B00019700000082010F0A5B28770A5B28770A5B28760A5B28770A5B287
+70A5B28770A5B28770A5B28760A5B28760A5B28760A5B28770A5B28760A5B28760A5B28760A5D28770A5D2877
+0A5D28770A5D28770A5D28770A5D28770A5D28770A5D28770A5D28770A5D28770A5F287700000000000000000
+0000000EEBA
+
+Byte#  Payload                      Description                                 Notes                     Result
+  0       08                                                               0x08 = TEK 822                TEK 822
+                            Defines the product type                    (See section 2.2.1.1)
+1      01                                                      Major 5 bits of 0x01 = 0b00000 = 0   BG96/pcb rev01
+                        Defines the Hardware Revision           Minor 3 bits of 0x01 = 0b001 = 1
+2      81       Major 5 bits of Byte 1 = 0 (BG96) or 1 (BG95)                                               1.4
+                                                               Minor 5 bits of 0xC1 = 0b00001 = 1
+3      04           Minor 3 bits of Byte 1 = 1 -> Pcb Rev1      Major 3 bits of 0xC1 = 0b100 = 4    Server Request
+                         Defines the Firmware Revision                                                    Active
+4      86                                                               0x04 = 0b00000100                 Lim3
+                 Minor 5 bits of Byte 2 = FW Major Revision                                               Lim2
+5      14        Major 3 bits of Byte 2 = FW Minor Revision             0x86 = 0b10000110                   20
+                                                                                                         LTE Act
+6      75                Defines the reason for contact                       0x14 = 20                  RTC Set
+                               (See Section 2.2.1.2)                    0x75 = 0b01110101
+                                                                       Batt = (21 x 100) / 31         Batt = 67.7%
+                          Defines the Status of Alarms
+                               (See Section 2.2.1.3)
+
+                  Defines the RSSI value of the LTE module
+                Defines battery, RTC & LTE status and battery
+
+                                    percentage
+                               (See section 2.2.1.4)
+
+7      08
+
+8      61
+
+9      07
+
+10     50       Defines the IMEI number                           Combination of bytes 7 to 14      IMEI = 0861075021004551
+
+11     21
+
+12     00
+
+13     45
+
+14     51
+
+15     04                 Defines the Message Type             Minor 6 bits of 0x04 = 0b000100 = 4  Message Type 4
+                        Minor 6 bits = Message Type                                                        123
+                                                               ·  0x04 = 0b00000100 = 0
+                Defines the length of the following payload
+16     7B          (Bit5&Bit4 of byte 15 x 256) + Byte 16      ·  0x7B = 123
+
+                                                                  (0 x 28) + 123 = 123
+
+4|P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+              2.2.1.2  Contact Reason
+
+Binary breakdown for contact reason:
+
+       Bit 7           Bit 6                    Bit 5         Bit 4  Bit 3   Bit 2      Bit 1  Bit 0
+
+Dynamic Limit2 Dynamic Limit                 TSP              Reboot Manual   Server    Alarm Scheduled
+                                         Requested                           Request
+Status                 Status
+
+0 = Inactive
+1 = Active
+
+              2.2.1.3  Alarm/Status
+
+Binary breakdown for alarm status:
+
+Bit 7         Bit 6    Bit 5             Bit 4         Bit 3         Bit 2 Bit 1 Bit 0
+
+Active Reserved Reserved Reserved Bund Status Limit 3 Limit 2 Limit 1
+
+0 = Inactive
+1 = Active
+
+Bit3: (Bund closed if Set)
+Flag will be set if Bund switch closed.
+
+              2.2.1.4  Battery/Status
+
+Binary breakdown for battery status:
+
+Bit 7         Bit 6 Bit 5 Bit 4 Bit 3 Bit 2 Bit 1 Bit 0
+
+Reserved LTE Act RTC Set                        Battery Percentage
+
+0 = Inactive
+1 = Active
+
+· Battery Percentage = (5 Minor bits x 100) / 31
+
+5|P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+             2.2.2 Message Type 4, 8 & 9
+The following table is for a standard Message type 4 payload. Message type 8 will also follow this format.
+This is a continuation of the preceding header message format, section 2.2.1.
+
+Sample Payload: (Payloads are Hexadecimal)
+0801C2828E14750861075021004551047B00019700000082010F0A5B28770A5B28770A5B28760A5B28770A5B287
+70A5B28770A5B28770A5B28760A5B28760A5B28760A5B28770A5B28760A5B28760A5B28760A5D28770A5D2877
+0A5D28770A5D28770A5D28770A5D28770A5D28770A5D28770A5D28770A5D28770A5F287700000000000000000
+0000000EEBA
+
+ Byte#      Payload                 Description                                 Notes                                    Result
+                            Defines the Message Type            Minor 6 bits of 0x04 = 0b000100 = 4                     Message
+   15          04         Minor 6 bits = Message Type                                                                    Type 4
+                                                             ·  0x04 = 0b00000100 = 0
+   16          7B     Defines the length of the following                                                                  123
+                                       payload               ·  0x7B = 123                                                  1
+   17          00                                                                                                           4
+   18          01    (Bit5&Bit4 of byte 15 x 256) + Byte 16                 (0 x 28) + 123 = 123                            0
+                                                                                                                          N/A
+   19          97          Defines the message count                           (0x00 x 28) + 0x01                        00:30
+                             (Byte 17 x 28) + Byte 18                            (0 x 28) + 1 = 1                           1
+   20          00                                                                                                       23:15:00
+                       Defines the Try Tickets remaining                      Major 3 bits of 0x97
+   21          00             Major 3 bits of byte 19                       0b10010111  100 = 4                            See
+                                                                                                                         section
+   22          00    Defines the last error code (FWv3.0)                   0x0000 = 0                                   2.2.2.2
+                      Defines the energy used (FW>v3.0)
+   23          82                                                                                   N/A
+                           Combine Byte 20 & Byte 21            0x82 = 0b10000010  2 x 15 = 30 mins  0 hours 30 mins =
+   24          01                        N/A
+                                                                                                 00:30
+   25          0F           Defines the logger speed
+                               (See section 2.2.2.1)                                              0x01 = 1
+ 26-29     0A5B2877
+ 30-33     0A5B2877  Count of 10-second increments taken        0x97 = 0b10010111  10111 = 23 hours
+ 34-37     0A5B2876        for logging in to network +                         0x0F = 15 mins
+ 38-41     0A5B2877
+ 42-45     0A5B2877   seconds to connect to GPRS server                     See section 2.2.2.2
+  4649     0A5B2877        Defines the Real Time Clock
+ 50-53     0A5B2877                  (hh:mm:ss)
+ 54-57     0A5B2876
+ 58-62     0A5B2876  Minor 5 bits of Byte 19 : Byte 25 : 00
+ 62-65     0A5B2876                     Data 0
+ 66-69     0A5B2877                     Data 1
+ 70-73     0A5B2876                     Data 2
+ 74-77     0A5B2876                     Data 3
+ 78-81     0A5B2876                     Data 4
+ 82-85     0A5D2877                     Data 5
+ 86-89     0A5D2877                     Data 6
+ 90-93     0A5D2877                     Data 7
+ 94-97     0A5D2877                     Data 8
+98-101     0A5D2877                     Data 9
+102-105    0A5D2877                    Data 10
+106-109    0A5D2877                    Data 11
+110-113    0A5D2877                    Data 12
+114-117    0A5D2877                    Data 13
+118-121    0A5D2877                    Data 14
+122-125    0A5F2877                    Data 15
+126-129    00000000                    Data 16
+130-133    00000000                    Data 17
+134-137    00000000                    Data 18
+138-139                                Data 19
+              EEBA                     Data 20
+                                       Data 21
+                                       Data 22
+                                       Data 23
+                                       Data 24
+                                       Data 25
+                                       Data 26
+                                       Data 27
+                                         N/A
+
+6|P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+                    2.2.2.1        Logger Speed
+
+· If byte 23 = 00 then the result = 1
+· If byte 23 = 80 then the result = 15
+· If byte 23  00 & byte 23  80 then use minor 7 bits of byte 23 and multiply the result by 15.
+· Result in minutes, convert to hours and then to 24-hour format (hh:mm)
+Example:
+Byte 23 = 55
+· 0x55 = 0b01010000  85
+· 85 x 15 = 1275minutes = 21.25 hours = 21 hours 15 minutes = 21:15
+
+                    2.2.2.2        Measurement
+
+Example: Byte 26 ­ 29 = 0x0A5B2877
+
+               RTC                        Data                           Aux1                  Aux2                        ºC
+                                                                                                          This is the temperature
+RTC (Data 0):                      This is the measurement       Should always be      Should always be   reported by the logger,
+                                                                          10.                   10.       measured in °C.
+This is the measurement            taken by the logger.
+timestamp of the scheduled         Combine nibble3&nibble2           4 major bits       Represented by    Bit5&Bit4 divided by 2.
+measurement sample taken                                         starting at bit 5 of        Byte 26      Subtract 30 from the result.
+                                                                                                          Example:
+immediately before the payload     with nibble1&nibble0"               Byte 28.        Example:           Byte26-29=0x0A5B2877
+delivery.                          ADC or percentage result                            Byte26= 0x0A = 10
+                                                                 Example:                                 0x5B = 91
+RTC: (Data 1 ­ 27)                 taken from the 10 minor bits  Byte 28 = 0x28
+Subtract the logger speed from     of this combination.           0b1010 = 10                             91/2 = 45.5
+
+the RTC (Data 0) time to get this  Example:                                                               45.5 - 30 = 15.5°C
+measurement timestamp.             Bytes 26-29 = 0x0A5B2877
+
+                                   (0x28 = 0b00101000)
+                                   (0x77 = 0b01110111)
+
+                                   Combo =
+                                   0b0010100001110111
+                                    0b0001110111 = 119
+
+                    Description    Byte#   Payload                RTC   %              AUX1  AUX2         ºC
+                       Data 0        26   0A5B2877               23:15
+                       Data 1        30   0A5B2877               22:45  119            10    10           15.5
+                       Data 2        34   0A5B2876               22:15
+                       Data 3        38   0A5B2877               21:45  119            10    10           15.5
+                       Data 4        42   0A5B2877               21:15
+                       Data 5        46   0A5B2877               20:45  118            10    10           15.5
+                       Data 6        50   0A5B2877               20:15
+                       Data 7        54   0A5B2876               19:45  119            10    10           15.5
+                       Data 8        58   0A5B2876               19:15
+                       Data 9        62   0A5B2876               18:45  119            10    10           15.5
+                      Data 10        66   0A5B2877               18:15
+                      Data 11        70   0A5B2876               17:45  119            10    10           15.5
+                      Data 12        74   0A5B2876               17:15
+                      Data 13        78   0A5B2876               16:45  119            10    10           15.5
+                      Data 14        82   0A5D2877               16:15
+                      Data 15        86   0A5D2877               15:45  118            10    10           15.5
+                      Data 16        90   0A5D2877               15:15
+                      Data 17        94   0A5D2877               14:45  118            10    10           15.5
+                      Data 18        98   0A5D2877               14:15
+                      Data 19       102   0A5D2877               13:45  118            10    10           15.5
+                      Data 20       106   0A5D2877               13:15
+                      Data 21       110   0A5D2877               12:45  119            10    10           15.5
+                      Data 22       114   0A5D2877               12:15
+                      Data 23       118   0A5D2877               11:45  118            10    10           15.5
+                      Data 24       122   0A5F2877               11:15
+                      Data 25       126   00000000               10:45  118            10    10           15.5
+                      Data 26       130   00000000               10:15
+                      Data 27       134   00000000               09:45  118            10    10           15.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           16.5
+
+                                                                        119            10    10           17.5
+
+                                                                        0              0     0            -30
+
+                                                                        0              0     0            -30
+
+                                                                        0              0     0            -30
+
+7|P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+             2.2.3 Message Type 6
+The Message type 6 will contain the header message, followed by the settings of the unit.
+This is a continuation of the preceding header message format, section 2.2.1.
+Sample Payload: (Payloads are Hexadecimal)
+08018224E0146F086107502100455106EB53303D38302C53313D30352C53323D3746303033382C53333D30312C5
+3343D303831452C53353D383833322C53363D383834362C53373D30302C53383D30302C53393D2B333533383631
+3735363336342C5331303D2C5331313D54454B3832322C5331323D73747265616D2E636F2E756B2C5331333D737
+47265616D69702C5331343D73747265616D69702C5331353D38342E35312E3235302E3130342C5331363D393030
+302C5331373D373230302C5331383D43382C5331393D30302C5332303D30302C5332313D2C5332323D2C533233
+3D31332C5332343D30302C5332353D30302C5332363D3130
+08018224E0146F086107502100455 is the message header, as defined in section 2.2.1
+06EB Message Type 6, 235 bytes to follow.
+53303D38302C53313D30352C53323D3746303033382C53333D30312C53343D303831452C53353D383833322C533
+63D383834362C53373D30302C53383D30302C53393D2B3335333836313735363336342C5331303D2C5331313D54
+454B3832322C5331323D73747265616D2E636F2E756B2C5331333D73747265616D69702C5331343D73747265616
+D69702C5331353D38342E35312E3235302E3130342C5331363D393030302C5331373D373230302C5331383D4338
+2C5331393D30302C5332303D30302C5332313D2C5332323D2C5332333D31332C5332343D30302C5332353D3030
+2C5332363D3130
+Message Body
+The Message Body is asci hex coded binary is simply converted to an ascii string.
+Each 2-character pair converts to an asci character.
+E.g., 0x53 converted to a decimal value = 83. Decimal 83 converts to character `S' from asci tables.
+hiip://www.asciitable.com/
+Using online convertor such as hiips://www.rapidtables.com/convert/number/hex -to-ascii.html
+
+Converted to ascii:
+S0=80,S1=05,S2=7F0038,S3=01,S4=081E,S5=8832,S6=8846,S7=00,S8=00,S9=+353861756364,S10=,S11=TEK822,S12
+=stream.co.uk,S13=streamip,S14=streamip,S15=84.51.250.104,S16=9000,S17=7200,S18=C8,S19=00,S20=00,S21=,S
+22=,S23=13,S24=00,S25=00,S26=10
+Which is the complete string of Settings for the unit, each setting parameter is delimited using a comma.
+
+8|P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+             2.2.4 Message Type 16
+The following table is for a standard Message type 16 payload.
+Sample Payload: (Payloads are Hexadecimal)
+0801C1048013400866425031171376104B2C38393838323339303030303032383839353233362C31393837352C33
+382C34302C31333631322C302C39313133312C31383030342C31322C3234303631392C31343336302C32382C60B
+B
+0801C1048013400866425031171376 is the message header, as defined in section 2.2.1
+104B Message Type 16, 75 bytes to follow.
+2C38393838323339303030303032383839353233362C31393837352C33382C34302C31333631322C302C39313133
+312C31383030342C31322C3234303631392C31343336302C32382C60BB
+Message Body
+The Message Body is asci hex coded binary is simply converted to an ascii string.
+Each 2-character pair converts to an asci character.
+E.g., 0x53 converted to a decimal value = 83. Decimal 83 converts to character `S' from asci tables.
+hiip://www.asciitable.com/
+Using online convertor such as hiips://www.rapidtables.com/convert/number/hex -to-ascii.html
+
+Converted to ascii:
+ICCID: 89882390000028895236
+Energy Used to Date: 19875
+Min Temp: 38
+Max Temp: 40
+Message Count: 13612
+Count of Delivery Fail: 0
+Total Send Time: 91131 (Can be used in conjunction with message count to determine average send time)
+Max Send Time: 18004
+Min Send Time: 12
+RSSI Total: 240619 (Can be used in conjunction with RSSI Valid Count to determine average RSSI)
+RSSI Valid Count: 14360
+RSSI Fail Count: 28
+
+9|P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+2.2.1 Message Type 17
+The following table is for a standard Message type 17 payload.
+Sample Payload: (Payloads are Hexadecimal)
+0801C104801340086642503117137611492C39352C3133343434322E302C353235352E393935304E2C3030383332
+2E34343137572C312E392C3132372E382C322C302E30302C302E302C302E302C3032313031352C30342C8843
+0801C1048013400866425031171376 is the message header, as defined in section 2.2.1
+1149 Message Type 17, 73 bytes to follow.
+2C39352C3133343434322E302C353235352E393935304E2C30303833322E34343137572C312E392C3132372E382C
+322C302E30302C302E302C302E302C3032313031352C30342C8843
+Message Body
+The Message Body is asci hex coded binary is simply converted to an ascii string.
+Each 2-character pair converts to an asci character.
+E.g., 0x53 converted to a decimal value = 83. Decimal 83 converts to character `S' from asci tables.
+hiip://www.asciitable.com/
+Using online convertor such as hiips://www.rapidtables.com/convert/number/hex -to-ascii.html
+
+Converted to ascii:
+GPS Time to Fix: 95
+UTC (Format: hh:mm:ss.s): 134442.0
+Latitude (Forrmat: ddmm.mmmm N/S): 5255.9950N
+Longitude (Format: dddmm.mmmm E/W): 00832.4417W
+Horizontal precision (0.5-99.9): 1.9
+Altitude: 127.8
+GNSS positioning mode: 2
+Ground heading based on true north (Format: ddd.mm): 0.00
+Speed over ground (Format: xxxx.x, unit: Km/h): 0.0
+Speed over ground (Format: xxxx.x, unit: knots): 0.0
+Date (Format: ddmmyy): 021015
+Number of satellites (From 00 to 12): 04
+
+10 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+3. Description of Data Transmission
+
+             3.1 S-Parameters (Settings)
+The logger is configured using the following S parameters. Blank values are undefined and can lead to inconsistent
+operation.
+
+S-            Parameter                                                            Description
+
+S0            S-Logger Config                        · How often a unit should store a reading.
+                                                     · How often a measurement is taken.
+S1            Listen Config                          · How long the unit remains active after powering up
+
+S2            Schedule Config                               (Multiples of 5 minutes, Max of 155 minutes)
+                                                     · Set schedule for when unit is to log data to server
+S3            Control configurator
+                                                            (Maximum activity = daily, every 2 hours)
+S4 & S5 & S6  Static alarms                          · Access Technology: (NBIOT/CATM1/2G)
+   S7 & S8    Dynamic alarms                         · CRC checking
+      S9      Primary Server SMS Phone number        · Bund Alarm
+     S10      Reserved                               · Alarm if measurement is higher or lower than a
+     S11      Unit Password
+     S12      PDP APN                                       selected height.
+     S13      PDP APN Username                       · Alarm if measurement is rising or falling at a rate
+     S14      PDP APN Password
+     S15      Destination Server IP address or URL          greater than selected.
+     S16      Destination Server Port number
+     S17      Battery Capacity (in mA Hrs)           · SMS fall back phone number.
+     S18      F-Stop
+     S19      Control3 Configurator                  · N/A
+     S20      E-Stop
+     S21      MCC MNC (Network Operator Short Code)  · Password required in order to update or change
+     S22      Operating Band Code                           settings to unit.
+
+S23           Message deliver try configurator       · Access Point Name. Name of the gateway to the
+                                                            server.
+S24           Schedule delay
+                                                     · APN Username.
+S26           Control2 configurator
+                                                     · APN Password.
+S29           Control4 Configurator
+                                                     · IP address or URL for server that unit is required to
+                                                            issue data to.
+
+                                                     · Port number for server that the unit is required to
+                                                            issue data to.
+
+                                                     · Determined by the battery capacity
+
+                                                     · For Ratiometric Gauges, to calibrate Max voltage
+                                                            reading Out to 100(Full) (or 1000)
+
+                                                     · APN Auth Type: PAP or CHAP or None
+
+                                                     · For Ratiometric Gauges, to calibrate Min voltage
+                                                            reading Out to Zero (Empty)
+
+                                                     · Mobile Country Code / Mobile Operator Code
+
+                                                     · LTE only
+
+                                                     · How many attempts to make data drop before falling
+                                                            back to SMS.
+
+                                                     · Time between attempts.
+                                                     · How many minutes of a delay from the schedule set as
+
+                                                            S2.
+
+                                                     · Reserved Functions
+
+                                                     · Reserved Functions
+
+11 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+             3.2 Data recording ­ S0
+The logger data is sampled and stored at various rates and stored in 2 different buffers, referred to as "Logging
+buffer" (Message type 4) and "Sampling buffer" (Message type 8).
+The rate at which the sampling buffer is filled is the sampling period and can be set at once per minute or once
+every 15 minutes (set by the MSB of S0). The sampling buffer has 10 positions so will fill in either 10 minutes or in
+2 hours and 30 minutes, depending on the setting of S0.
+The rate at which the logger is filled is referred to as the logger speed and the rate at which it is filled can be set
+from once every 15 minutes up to once every 31 hours (in increments of 15 minutes) using the lower 7 bits of S0.
+The log samples are synchronised to the real-time clock i.e., samples will be taken on the hour and multiples of 15
+minutes after that. The log has 28 positions. Therefore, the logger will cover a minimum period of 28 x 15 minutes
+= 7 hours or a maximum of 31 x 28 hours = 868 hours. Each time a new sample is taken the oldest sample "drops
+off" the end of the log.
+
+             3.3 Listen time ­ S1
+Once the unit has delivered its payload it can be configured to stay on the network in listen mode to pick up any
+commands that the user may wish to send to it. The duration that the unit will stay in listen mode after a
+scheduled upload is defined by the S1 setting. The listen time is set in increments of 5 minutes up to a maximum of
+155 minutes (0 = 60 seconds). When the unit receives an SMS or TSP command the timer is reset, with the
+exception of an R1=80 command (see section 3.17) which will cause the module to shut down and enter sleep
+mode.
+The duration that a unit remains connected to the network is critical for battery life which must be balanced with
+allowing sufficient time for commands to be received. (Maximum recommended of 10 minutes)
+Unit will emit a beep once every 4 seconds when not sending or receiving data.
+When the unit receives data, it will emit a high beep followed directly by a low beep.
+When the unit has sent data, it will emit a low beep followed directly by a high beep.
+
+             3.4 Schedule configurator ­ S2
+The system will upload the data from the logging buffer at regular intervals defined by settings in the S2 register
+(only values since the last scheduled upload will be transmitted). (See section 3.16.3)
+The unit can be configured to send data once per day on particular days of the week or can be configured to send
+more regularly i.e., every 2 hours or 4 hours, between specific times. These settings can also be overwritten to
+have unit send data fortnightly or monthly.
+
+             3.5 Communication channels ­ S3 & S26
+The unit can communicate over LTE or GPRS. The default communication is over LTE with the unit falling back to
+SMS in the event of the communications being unsuccessful. These settings can be changed using S3 and S26.
+Alternatively, S26 can be used to disable SMS fall back (bit 0) or S26 bit 1 can be set to allow SMS on alarm only
+(but not for scheduled uploads). Note that bit 1 overrides this setting i.e., bit 1 disables SMS in all instances. Bit 2
+of S26 can be used to disable text back queries (see SMS text back section)
+
+             3.6 CRC checking ­ S3
+CRC is a Cyclic Redundancy Check added to the end of any message sent to the unit and is used for basic message
+integrity. This feature can be enabled/disabled via bit 4 of S3.
+
+12 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+             3.7 Alarms ­ S4, S5, S6, S7 & S8
+
+Static Alarm: Static alarms are based on the sampled values. There are three separate static alarms configured by
+S4, S5 and S6. These can be configured to alarm when the measured value is higher or lower than the defined
+threshold and a hysteresis value can also be defined. Note that the unit adds 3cm to the hysteresis value entered
+to compensate for any jitter in the measurement. When a static alarm is activated, an immediate message type 8
+is sent to the server ­ see section on message types for further information.
+
+Dynamic Alarm: Dynamic alarms are based on entries in the sample buffer. When a dynamic alarm is triggered an
+immediate message type 8 is sent to the server ­ see section on message types for further information. There are
+up to 2 dynamic alarms configured with S7 and S8.
+S7 can initiate a countdown timer for the unit to transmit a message containing data from the sampling buffer. The
+rate-of-change (ROC) alarms are calculated using the current and previous readings. This can be useful to detect fill
+and empty events. For more details refer to S29.
+S8 can also operate as No-Change alarm (NCA), depending on S26 configuration. The NCA is calculated using the
+current and 10th oldest reading. The polarity defined on S8 sets the direction which the content being monitored is
+expected to change, in order to avoid triggering an alarm. The alarm is triggered if the content is changing slower
+or equal than the expected change, the content is static or the content is changing in reversed direction.
+
+Note that it is recommended that a minimum of 5% change is looked for over the full log which sets limitations on
+possible settings.
+
+             3.8 Standard communications ­ S9, S10, S12, S13, S14,S15 & S16
+
+When communicating the unit connects to the network with settings defined in S12, S13 and S14 (PDP APN,
+username and password). The data will be sent to the IP address and port number stored in S15 and S16
+respectively. The server at this IP address can then pick up communications coming on this port and parse as per
+detailed in section 3.16.7.
+
+             3.9 System password ­ S11
+Any commands sent to the unit need to start with the password set in S11. The default password is TEK822.
+
+3.10 Battery capacity in mA hrs ­ S17
+
+This is a 5-character ASCII string which defines the capacity of the battery installed in the logger in mA hours.
+
+           Example Values
+
+"A" Size Capacity  3600
+
+Double "A" Pack    7200
+
+"C" Size Capacity  7700
+
+"D" Size Capacity 17500
+
+             3.11 F-Stop (Force Stop) ­ S18
+This is used to calibrate ratio-metric gauges maximum voltage reading.
+
+             3.12 Control3 Configurator ­ S19
+Allows to set APN authentication type.
+
+13 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+             3.13 E-Stop (Empty output voltage) ­ S20
+
+This is used to calibrate ratio-metric gauges minimum voltage reading to zero (empty).
+Example:
+An empty stop value representing 0.25V will have an empty stop value of 0x0A.
+A value of 0.02 V represents a value of 0x01. The formula for e-stop value is the following:
+(200 x voltage)/5 rounded to the nearest integer. This number is then converted to hexadecimal.
+The minimum value is therefore 0.02V.
+
+             3.14 Retry configurator ­ S23
+In the event of the unit not being able to deliver its payload successfully it can make a number of subsequent
+attempts to deliver the data. The total number of attempts that the unit will make can be configured using S23.
+Note that in the event of SMS being enabled (see section on Communication Channels), the last try attempt will be
+via SMS.
+
+             3.15 Schedule delay ­ S24
+The S2 register can define the upload schedule in increments of 15 minutes. If a number of units are installed
+together this can lead to excessive network traffic at these times. A different schedule delay can be configured for
+each unit to overcome such a problem. S24 is used to configure the delay in minutes from the schedule upload
+time configured by S2.
+
+             3.16 Control2 configurator ­ S26
+The S26 register defines the SMS control and formatting of ADC sensor data for the logger.
+
+             3.17 Dynamic Alarm 1 Offset Timer ­ S29
+When the dynamic alarm 1 (S7) is triggered, a second message can be sent to the server, after a pre-selected
+period has passed. This can be useful to detect fill or empty events. The message will be reported as type #9 and it
+contains data from the sampling buffer, at a sample rate defined on S0. This option can be enabled via S29.
+
+14 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+             3.18 Long Timeframe Retry ­ S29
+
+In the event of the unit not being able to deliver its scheduled payload, after all attempts (S23) and GSM listen
+period (S1), the unit will start successive single attempts, with 1-hour period. This will continue until the payload is
+delivered or a new scheduled message is triggered. Any off-schedule message, even if successfully delivered,
+doesn't override a pending long timeframe retry message. This retry mechanism is only available for scheduled
+messages and it is enabled by default. It can be disabled using S29.
+NOTE: When the scheduled message is not delivered due to supercapacitor undervoltage, the 1-hour retry
+mechanism will not be triggered.
+
+             3.19 Manual wakeup
+Holding a magnet to the hot spot will cause the unit to take 10 sample readings in quick succession, filling the
+sampling buffer, and will transmit this data in a message type 8 to the server. Therefore, the contents of the
+sampling buffer are effectively cleared when the unit is activated with a magnet.
+
+15 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+          3.20 Configuration Commands
+
+             3.20.1 S0: Logger Configuration
+
+Logger Speed:
+· Range of 0 - 31.75 Hours
+· Multiples of 0.25 hours
+· 0 = Locked to Sampling Rate
+
+ Configuration   Command  Formula                                    Description
+ Logger Speed       0.00      A    Desired logger Speed, hours, in 0.25-hour increments. Max 31 hours
+Sampling Period       1       B    Desired sampling period: 0 if once per min, 1 if once every 15 mins
+                   S0=80           Data sample once every 15 mins, Logged ever 15 mins
+    RESULT:
+
+Formula:
+S0=(128 x B) + (A x 4)
+
+Example:
+o S0=(128 x 1) + (0.00 x 4)
+o S0=128 + 0
+o S0=128
+o S0=0x80
+
+             3.20.2 S1: Listen Configuration
+
+· Max of 155 minutes (Recommended Max 10 minutes)
+· Multiples of 5 minutes
+· 0 = 60 seconds (Recommended)
+
+Configuration    Command  Formula         Description
+Listen Period         5       A     Desired listen Period
+                                   Listen period 5 minutes
+   RESULT:         S1=01
+
+Formula:
+S1=(A/5)
+
+Example:
+o S1= (5/5)
+o S1=1
+o S1=0x01
+
+16 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+             3.20.3 S2: Schedule Configuration
+This parameter defines how the sensor is configured to regularly send logged measurement data in Data Message
+Type 4 to the server.
+· If the End Time entered is before the Start time, no scheduled data will be transmitted
+
+                                                      Command
+
+Configuration     Sunday                                                          Formula                 Description
+                           Saturday
+
+                                    Friday
+                                              Thursday
+                                                       Wednesday
+                                                                 Tuesday
+                                                                          Monday
+
+                  1  1          1   1         1  1  1                             A        Enter '1' to select day(s) of week for data delivery
+
+Day to upload                       8                                             B        Enter Time to Dial, Hours
+
+                                    0                                             C        Enter Time to Dial, Minutes
+                                                                                           (Will be rounded to 15 min intervals)
+
+                                    0                                             D        Enter '1' if Upload required more than once per day
+                                                                                           Enter '0' if once per day
+
+Upload More than                    1                                             E        Enter '1' to dial every 4 hrs, '0' to dial every 2 hrs
+   once per day                                                                            (Ignored if once per day)
+
+                                    22                                            F        Enter End time (Hours) (> Start Time)
+                                                                                           (Ignored if once per day)
+
+Weekly Override:                         0                                        G        Override weekly schedule: Enter '1' if fortnightly or once
+> once per week                          0                                                 per month delivery required.
+                                   S2=7F2056
+     RESULT:                                                                      H        Enter '1' for once per month, on the 21st, or,
+                                                                                           enter '0' for Fortnightly on the 1st & 14th each month
+
+                                                                                           Daily @ 08:00
+
+Formula:
+      A=(Sunday,Saturday,Friday,Thursday,Wednesday,Tuesday,Monday)
+
+1. XX= (G,A)
+2. YY= (H x 128) + (B x 4) + (C/15)
+3. ZZ= (E x 64) + (D x 32) + F
+4. S2=XXYYZZ
+
+Example:
+1. XX=(0b01111111)
+
+      XX=0x7F
+
+2. YY=(0 x 128) + (8 x 4) + (0/15)
+      YY=(0 + 32 + 0)
+      YY=32
+      YY=0x20
+
+3. ZZ=(1 x 64) + (0 x 32) + 22
+      ZZ=64 + 0 + 22
+      ZZ=86
+      ZZ=0x56
+
+4. S2=7F2056
+
+17 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+3.20.4 S3: Control Configuration
+
+          Configuration        Command     Formula                                                Description
+    Network Comms Mode             01          A     0=LTE CatM1, 1=LTE NB-IOT, 2=2G
+                                    0          B     Reserved
+             Reserved                          C     0=Send Msg 16 by server request only
+                                    0                1=Send Msg 16 sent once per month preceding the 1st scheduled Msg 4 in that month
+           Message 16               0          D     Reserved
+                                    0          E     1=Enable. Recommended not set.
+             Reserved               0          F     1=Enable Note! If set, will disable phone commands!
+     Dry contact Switch P1          0          G     Reserved
+CRC checking of incoming data    S3=01
+
+             Reserved
+             RESULT:
+
+Formula:
+S3=G,F,E,D,C,B,A
+
+Example:
+o S3=0b00000001
+o S3=0x01
+
+3.20.5 S4, S5, S6: Static Limit Configuration
+
+Configuration   Command        Command     Command   Formula                                     Description
+Limit Polarity       1              0           0        A    1= alarm when measured value is higher than the threshold,
+                                                              0 = alarm when measured value is lower than the threshold
+Alarm Enabled        1              0           0        B    1 = Enabled, 0 = Disable.
+  Hysteresis        10              0           0        C    N.B. Alarm Status flags in Message headers will be set, irrespectively.
+  Threshold         150             0           0        D    Reset level is 3 greater than value entered here
+   RESULT:       S4=E896        S5=0000     S6=0000           The setting threshold for level alarm.
+                                                              S4 Example: Alarm set if measured units are >150, reset level = 137
+
+Formula:
+S4= D + C x (210) + B x (214) + A x (215)
+
+Example:
+o S4=150 + 10 x (210) + 1 x (214) + 1 x (215)
+o S4=150 + 10240 + 16384 + 32768
+o S4=59542
+o S4=0xE896
+
+18 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+             3.20.6 S7, S8: Dynamic Limit Configuration
+· Range of 0 - 63, in increments of 1 units.
+
+Configuration  Command  Command       Formula                              Description
+    Polarity        1        0            A    1= Alarm if Rising Units (Tank Not Emptying)
+                    1        0            B    0= Alarm if Falling Units (Tank Not Filling)
+Alarm Enabled                                  1=Enabled, 0 = Disable
+                   27       0.0           C    (Alarm Status flags will be set, irrespectively)
+      Rate       S7=BD    S8=00                Units per minute or units per 15 minutes, depending on S0
+   RESULT:                                     Range 0-63, in increments of 1 unit
+                                               Alarm if change = C/15
+                                               S7 Example: Alarm if change >0.27 unit/min
+
+Formula:
+S7= A x (27) + B x (26) + C x (20)
+
+Example:
+o S7=1 x (27) + 1 x (26) + 27 x (20)
+o S7=128 x 64 + 27
+o S7=219
+o S7=0xBD
+
+             3.20.7 S9 ­ S17: SMS, APN, URL and Tank Details Configuration
+· The following Parameters S9 to S16 are Ascii, with max length of 20 characters (A20)
+
+S- Description                                   Default
+
+S9: Primary Server SMS Phone Number (A18)
+
+S10: Reserved
+
+S11: Unit Password (A6)                          TEK822
+
+S12: PDP APN (A29)
+
+S13: PDP APN Username (A15)
+
+S14: PDP APN Password (A15)
+
+S15: Destination Server IP address or URL (A40)
+
+S16: Destination Server Port Number (A5)
+
+S17: Battery Capacity                            7200
+
+19 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+             3.20.8 S18: F-Stop
+· For Ratiometric Gauges.
+
+                    Configuration               Command  Formula        Description
+Max voltage reading Out to 100(Full) (or 1000)       5       A    Maximum Sensor Volt
+
+                       RESULT:                   S18=C8
+
+Formula:           {rounded to the nearest integer}
+S18=(200 x A)/5
+
+Example:
+o A=5
+
+o S18=(200 x 5)/5
+o S18=1000/5
+o S18=200
+o S18=0xC8
+
+             3.20.9 S19: Control3 Configurator
+· APN authentication type.
+
+o S19=00 (PAP or CHAP)
+o S19=01 (None)
+
+             3.20.10 S20: E-Stop
+· For Ratiometric Gauges.
+
+                Configuration            Command  Formula        Description
+Min voltage reading Out to Zero (Empty)       1       A    Minimum Sensor Volt
+
+                   RESULT:                S20=28
+
+Formula:           {rounded to the nearest integer}
+S20=(200 x A)/5
+
+Example:
+o A=1
+
+o S20=(200 x 1)/5
+o S20=200/5
+o S20=40
+o S20=0x28
+
+             3.20.11 S21 MCC_MNC Mobile Country Code / Operator Code
+
+The setting parameter is the mobile operator's short code and should be set according to the sim card in use.
+E.g., for Vodafone Ireland, the network operator short code is 27201
+Leave blank if 2G.
+
+20 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+          3.20.12 S22 LTE Band
+
+LTE Band lookup table:
+
+     LTE CAT-M1                         LTE NB-IoT                           2G
+
+Band S22 Code              Band           S22 Code                Band           S22 Code
+
+B1             1                    B1              1               900MHz       1
+
+B2             2                    B2              2               1800MHz      2
+
+B3             4                    B3              4               850MHz       4
+
+B4             8                    B4              8               1900MHz      8
+
+B5             10                   B5              10
+
+B8             80                   B8              80
+
+B12            800                  B12   800
+
+B13            1000                 B13   1000
+
+B18            20000                B18   20000
+
+B19            40000                B19   40000
+
+B20            80000                B20   80000
+
+B26            2000000              B26   2000000
+
+B28            8000000              B28   8000000
+
+B39            4000000000
+
+             3.20.13 S23: Message Deliver Configuration
+
+· Try Tickets max of 8
+· Try Period max of 320 seconds
+
+Configuration  Command     Formula            Description
+  Try Tickets       4          A    Number of delivery attempts
+  Try Period       30          B    Time between tries (seconds)
+   RESULT:
+                S23=13
+
+Formula:
+1. X=A-1
+2. Y=(B/10) -1 {Note: Result of B/10 to be rounded down}
+3. S23= X + (Y x 8)
+
+Example:                                 2. Y=(30/10) -1                         3. S23=3 + (2 x 8)
+  1. X=4-1                                     Y=3-1                                   S23=19
+        X=3                                    Y=2                                     S23=0x13
+
+             3.20.14 S24: Schedule Delay
+
+· Max delay of 14 minutes
+· Default = No delay (0 minutes)
+
+Configuration  Command     Formula              Description
+     Delay          5          A    Data Drop Delay from Scheduled
+
+   RESULT:      S24=05
+
+Formula:
+S24=A
+
+Example:
+o S24=5
+o S24=0x05
+
+21 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+          3.20.15 S26: Control2 Configuration
+
+· 1 = Enabled, 0 = Disabled               Command  Formula                                   Description
+                                               0       A    1=Enable
+                   Configuration               0       B    If Enabled, last Try ticket will be GPRS only
+  Temperature Alarm (Static Alarm 0)           0       C    If Enabled, last re-try attempt will be SMS if alarm only.
+  SMS Disable fall back (GPRS only)            0       D    Reserved
+  SMS Alarm only fall back                     0       E    1=Enable
+  Reserved                                     0       F    0=Normal, 1=Inverted output reporting
+  No change Alarm (Dynamic Alarm 2 ­ S8)       0       G    0=Low Resolution 0-100%, 1=High Res, 0-1000
+  ADC Sensor Output1                           1       H    If 0, Bits # 5,6 above apply. If 1, output is Raw 10-bit ADC (0-1023)
+  ADC Sensor Output2
+  ADC Sensor Output3                       S26=80
+
+                      RESULT:
+
+Formula:
+S26=H,G,F,E,D,C,B,A
+
+Example:
+o S26=0b10000000
+o S26=0x80
+
+          3.20.16 S29: Control4 Configuration
+
+· 1 = Enabled, 0 = Disabled
+
+Configuration                 Command     Formula                                  Description
+                                              A
+Reserved                      0               B    1h retry for scheduled messages, if all normal retry attempts fail
+                                              C    0=enabled, 1=disabled
+Reserved                      0                    Offset timer to report msg #9 after dynamic limit 1 (S7) triggers
+                                              D    0=disabled, 1=15min, 2=30min, 3=60min
+Reserved                      0
+                                              E
+Disable long timeframe retry  1
+                                              F
+Dymanic Limit 1 Offset Timer     3            G
+
+Reserved                         0
+Reserved                         0
+                              S29=38
+            RESULT:
+
+Formula:
+S29=G x (27) + F x (26) + E x (24) + D x (23) + C x (22) + B x (21) + A x (20)
+
+Example:
+o S29= 0 x (27) + 0 x (26) + 3 x (24) + 1 x (23) + 0 x (22) + 0 x (21) + 0 x (20)
+o S29= 48
+o S29=0x38
+
+22 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+3.21 Request commands
+
+Commands can be sent via SMS or via GPRS (converted to hex)
+
+Request commands are available as follows:
+
+<password>, R2= yy/mm/dd:hh/mm/ss                          set RTC
+<password>, R3=ACTIVE                                      sets units to active state
+<password>, R4=DEACT                                       de-activates scheduled uploads
+<password>, R6=03                                          close TCP connection
+<password>, R1=80                                          shutdown modem and sleep
+
+S parameters can be programmed using the following format:
+<password>,Sx = yyyy
+where x is the number of the S parameter that is to be set and yyyy is the value to which it will be set. Note that
+commands can be concatenated (separated by commas).
+
+Note: The command R3=ACTIVE should be issued to the logger upon first activation.
+
+3.22 SMS text back
+
+Details of SMS text back queries are in the commands and config file. When a text back query is received, the reply
+is sent to the number from which the query came.
+
+                                                 Default Password (S11) = TEK822
+
+     Command                Meaning                        Response Example                Note
+Level=?
+TEK822, Info=?   TextBack the Tank Fuel          Level=63                                The Level number returned is as formatted by
+                 level reading                                                           S26.
+TEK822, Set=?,n                                                                          Level reading based on measuring pin ADC #1
+                 (Password Protected)
+                 Status Information:             IMEI=863835020373234                    Loc (location) is optionally available
+                 IMEI, HW Version, SW            Hw=1                                    If location is returned. For M!0/UC15, this will
+                 Version, Battery, Rssi,         Fw=3.7                                  be approximate location based on Cell
+                 Network Operator, RTC,          Bat=47                                  positioning.
+                 Active/Deact.                   Rssi=23                                 Format DD, Lat/Long.
+                                                 Serv="O2 IRL",3G,R                      The position is refreshed after this message, or
+                 (Password Protected)            RTC 24/9/15 13:12:1 (0)                 after manual activation.
+                 Dump of S parameters,           Act                                     For UC20, if GPS location is requested, then this
+                 starting at n.                  Loc=52.905273,-8.546389                 field will be GPS, in degrees.
+                 (If 'n' omitted, will start at
+                 S0)                             S0=01,S1=02,S2=7F0036,S3=04,S4=8832,S   The starting number n can be varied. In the
+                                                 5=0000,S6=0000,S7=CA,S8=9E,S9=+44762    example of using start number=0, not all of the
+                                                 4811142,S10=+447624811142,S11=TEK82     S-parameters may fit into 160 characters.
+                                                 2,S13=streamip,S14=streamip,S15=84.51.  Therefore, more than 1 dump may be needed.
+                                                 244.10                                  In the example shown, the 1st 15 S=params
+                                                                                         occupies 152 chars. Another Texback command
+                                                                                         Set=?,16 would be needed to follow.
+
+23 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+4. Technical Specification
+             4.1 Reed switch interface
+
+A reed switch provides a user interface input for the LTE logger. The reed switch is triggered by a user held
+magnet.
+
+             4.2 Buzzer
+The LTE logger status feedback will also be provided via a buzzer. Detailed further in document.
+
+             4.3 TSP Interface
+Test interface (transponder) can be used for test and parameter programming purposes. The transponder does not
+form part of the product.
+
+             4.4 Connectivity
+Communication is provided by an on-board Module. The LTE logger communicates using standard protocols /
+services available from a common-carrier.
+
+5. On-site Maintenance Checks
+For installations where the logger is operated in Hazardous areas, the connected sensor device must have the
+appropriate certifications, and installed according to the sensor device manufacturer installation instruction.
+Installation of this equipment must be carried out by suitable trained personnel.
+
+             5.1 Mounting
+During on-site maintenance, the operator must ensure that the LTE logger is still securely tightened in a position
+that is not susceptible to physical damage.
+The logger should ideally be located within 2 meters of the sensing device.
+
+             5.2 Environment
+During on-site maintenance, the operator must check that external environment does not degrade the
+performance of the logger or the sensor, such as clay, dust, water, etc.
+
+             5.3 Cleaning
+Electrostatic Hazard. Clean only with damp cloth.
+
+24 | P a g e
+Logger NB-IoT/CAT-M1 User Manual
+
+6. Trouble Shooting
+
+           6.1 Beep Pattern       Definition
+
+Beep Pattern                      Network Registration
+                                  GPRS Registration
+Low beep once per second          Network / TCP Listen
+High beep once per second         Re-establish Network / TCP
+Low beep once every 4 seconds     Incoming Data
+Low beep once every 2 seconds     Outgoing Data
+High / Low combination beep       Network Listen (Data Received & Unit Active)
+Low / High combination beep       Re-establish Network
+Low double-beep every 4 seconds   TCP Listen (Data Received & Unit Active)
+Low double-beep every 2 seconds   Re-establish TCP
+High double-beep every 4 seconds
+High double-beep every 2 seconds
+
+For further details please see additional documents:
+· DS-5048-XX TEK 822 LPG Logger 4G CAT-M1
+· DS-5081-XX TEK 822 NB-IoT_CAT-M1 Logger Exi LPG sensor
+· 9-5940-XX TEK 822 LPG Logger 4G NB-IoT_CAT-M1 Installation Guide
+· 9-5923-XX TEK 822 Installation Instructions
+· 9-5965-XX Product ID reference document
+· 9-6083-XX TEK 822 Retry Mechanism with 2G fallback
+· 9-6084-XX TEK 822 Connection Sequence & Remote configuration
+· M-I5268-XX TEK 643 - TEK 822 Battery Replacement
+
+25 | P a g e
+

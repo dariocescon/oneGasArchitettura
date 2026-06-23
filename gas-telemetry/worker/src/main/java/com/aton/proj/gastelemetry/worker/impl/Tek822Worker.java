@@ -89,7 +89,7 @@ public class Tek822Worker implements Worker {
         CommandsPacket commands = ctx.getCommands(deviceId);
         if (commands.hasCommands()) {
             byte[] payload = composeAsciiPayload(commands);
-            ctx.sendToDevice(payload);
+            ctx.sendToDevice(payload); // TODO : spostare nel worker
             ctx.markCommandsSent(commands.handle());
             log.debug("Sent {} command(s) ({} byte) to device {}",
                     commands.commands().length, payload.length, deviceId);
@@ -143,6 +143,10 @@ public class Tek822Worker implements Worker {
                 sb.append(',').append(stripPassword(ascii[i])); // successivi: dedup password
             }
         }
+        // Terminatore CRLF (fix B3): XLSM "822 CC" R0002 definisce la forma
+        // canonica come "<Password>,<Settings>,<CRC><CRLF>". Senza il terminatore
+        // alcuni firmware restano in listen mode in attesa della fine del comando.
+        sb.append("\r\n");
         return sb.toString().getBytes(StandardCharsets.US_ASCII);
     }
 

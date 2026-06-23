@@ -1,0 +1,38 @@
+=== SHEET: Request Commands (44x7) ===
+R0001: List of commands issued to the RTU |  |  |  |  |  | 
+R0002: Default Password (S11)= | TEK822 | <== Remember to set the password for the product |  |  |  | 
+R0004: Commands | Request | Response | Command | Note |  | 
+R0005: Server commands |  |  |  |  |  | 
+R0006: TEK822,R1=01,Z=9C4C | Send Logger data to server | Msg #4 to Server | TEK822,R1=01,Z=9C4C | Example of CRC terminated command |  | 
+R0007: TEK822,R1=02 | Send S-Regs to server (All, starting @ S0) | Msg #6 to Server | TEK822,R1=02 | may be truncated to 140 bytes if SMS |  | 
+R0008: TEK822,R1=04 | Send S-Regs to server (Starting @ S12) | n/a | TEK822,R1=04 | may be truncated to 140 bytes if SMS |  | 
+R0009: TEK822,R1=08 | Send S-Regs to server (Starting @ S19) | n/a | TEK822,R1=08 | may be truncated to 140 bytes if SMS |  | 
+R0010: TEK822,R1=10 | Reset RTC | None | TEK822,R1=10 | Next drop, will re-synch RTC |  | 
+R0011: TEK822,R1=20 | Send Buffer data to server | Msg #8 to Server | TEK822,R1=20 |  |  | 
+R0012: TEK822,R1=40 | Initiate OTA firmware upgrade | RDY,0 | TEK822,R1=40 |  |  | 
+R0013: TEK822,R1=80 | Shut down Modem, and sleep | None | TEK822,R1=80 |  |  | 
+R0014: TEK822,R2=25/10/06:15/01/36 | Sets the unit RTCC | None | TEK822,R2=21/07/07:16/22/22 | Format:R2=YY/MM/DD:hh/mm/ss |  | 
+R0015: TEK822,R3=ACTIVE | Sets unit to the Active state | None | TEK822,R3=ACTIVE |  |  | 
+R0016: TEK822,R4=DEACT | Sets unit to the De-active state | None | TEK822,R4=DEACT |  |  | 
+R0017: TEK822,R7=FF, | Request GPS. ff = timeout (Hex, seconds).   | Msg #17 to server | TEK822,R7=FF, | Support for this command requires a 3G GSM module with GPS & the response will be delayed by the time to get a lock |  | 
+R0018: TEK822,R6=01 | Diagnostic Data | Msg #2 to server | TEK822,R6=01 |  |  | 
+R0019: TEK822,R6=02 | Additional Status Info. | Msg #16 to server | TEK822,R6=02 |  |  | 
+R0020: TEK822,R6=03 | Close TCP connection | None | TEK822,R6=03 |  |  | 
+R0021: Transponder only commands |  |  |  |  |  | 
+R0022: TEK822,R5=01 | Wake up, Turn on modem, Register and Connect | Connection progress to TSP | TEK822,R5=01 | Connect to server only if S3.2,GPRS =1 and correct APN, TCP settings |  | 
+R0023: TEK822,R5=02 | Turn off Modem & Sleep | Ack to TSP | TEK822,R5=02 |  |  | 
+R0024: TEK822,R5=03 | Return all S Register settings  to TSP | All settings to TSP | TEK822,R5=03 |  |  | 
+R0025: TEK822,R5=04 | Return Immediate Acquired data to TSP | Data to TSP | TEK822,R5=04 | Tekelek engineering only - DO NOT USE |  | 
+R0026: TEK822,R5=05 | Return Diagnostics & additional info | Diagnostics to TSP | TEK822,R5=05 | Tekelek engineering only - DO NOT USE |  | 
+R0027: TEK822,R5=06 | Clears All Counters, reset Power Used. | Ack to TSP | TEK822,R5=06 | Tekelek engineering only - DO NOT USE |  | 
+R0028: TEK822,R5=07 | Invoke Firmware upgrade over TSP |  | TEK822,R5=07 | May not be supported - depends on model |  | 
+R0029: TEK822,R5=08 | Execute AT command | Response copied to TSP | TEK822,R5=08 | Tekelek engineering only - DO NOT USE |  | 
+R0030: TEK822,R5=09 | DTR=1 |  | TEK822,R5=09 | May not be supported - depends on model |  | 
+R0031: TEK822,R5=0A | Close TCP Connection | Ack to TSP | TEK822,R5=0A |  |  | 
+R0032: TEK822,R5=0B | DTR=0 |  | TEK822,R5=0B | May not be supported - depends on model |  | 
+R0033: TEK822,R5=0C | Return unit ID (Iccid, IMEI, IMSI, NickName) | Response copied to TSP | TEK822,R5=0C |  |  | 
+R0034: TEK822,R5=0D | Write NickName (Alternate identifier) | Ack to TSP | TEK822,R5=0D |  |  | 
+R0035: TEK822,R5=0E | Test GPS function | Output response to QGPSLOC every 5 seconds. | TEK822,R5=0E |  |  | 
+R0036: TEK822,R5=0F | Dump DataCache | Response copied to TSP | TEK822,R5=0F |  |  | 
+R0037: TEK822,R5=10 | Dump DataLog | Response copied to TSP | TEK822,R5=10 |  |  | 
+R0038: TEK822,R5=11 | Power up Modem | None (Beeping) | TEK822,R5=11 |  |  | 

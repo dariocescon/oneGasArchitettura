@@ -1,0 +1,507 @@
+{
+  ".claude/settings.json": {
+    "mtime": 1781519527.4784184,
+    "ast_hash": "7bf81dca0376bde3a32244b82bc7cbc0",
+    "semantic_hash": ""
+  },
+  ".claude/settings.local.json": {
+    "mtime": 1777375669.8429682,
+    "ast_hash": "e5a05ab9ae77d0187b96ad72f4033027",
+    "semantic_hash": ""
+  },
+  "_xlsm_dump.py": {
+    "mtime": 1781520125.7740474,
+    "ast_hash": "31b80003ab8ada64f59399e3ed862ea7",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/command-api/src/main/java/com/aton/proj/gastelemetry/commandapi/CommandApiApplication.java": {
+    "mtime": 1777375454.2024944,
+    "ast_hash": "f833629262f8ffe06fcaaa043d946c1f",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/command-api/src/main/java/com/aton/proj/gastelemetry/commandapi/dto/CommandView.java": {
+    "mtime": 1777375554.986456,
+    "ast_hash": "9da763ffbad3a711016991297cd92202",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/command-api/src/main/java/com/aton/proj/gastelemetry/commandapi/dto/CreateCommandRequest.java": {
+    "mtime": 1777375547.688445,
+    "ast_hash": "fc90915af5a58d2c734f0a273633c08e",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/command-api/src/main/java/com/aton/proj/gastelemetry/commandapi/rest/CommandController.java": {
+    "mtime": 1777375572.5036027,
+    "ast_hash": "a660a8d0b5f0dc730c060add1a388a45",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/command-api/src/main/java/com/aton/proj/gastelemetry/commandapi/rest/ConfigController.java": {
+    "mtime": 1777375603.6583493,
+    "ast_hash": "5837e400ec51cc07d9467a774da108eb",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/command-api/src/main/java/com/aton/proj/gastelemetry/commandapi/rest/TimeSeriesController.java": {
+    "mtime": 1777375590.122542,
+    "ast_hash": "5b26cfadc8eab75bac47c86893b29ff3",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/command-api/src/test/java/com/aton/proj/gastelemetry/commandapi/CommandApiApplicationSmokeTest.java": {
+    "mtime": 1777375616.3143268,
+    "ast_hash": "89648372032a03057241b76e67b366b1",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/command-api/src/test/java/com/aton/proj/gastelemetry/commandapi/rest/CommandControllerTest.java": {
+    "mtime": 1777375638.6588402,
+    "ast_hash": "e98941b0c93ab9834cf0258ab729bd3b",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/command-api/src/test/java/com/aton/proj/gastelemetry/commandapi/rest/ConfigControllerTest.java": {
+    "mtime": 1777375656.2706158,
+    "ast_hash": "d9207c5fab21c02a6fdff83634facfe2",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/common/src/main/java/com/aton/proj/gastelemetry/common/Alarm.java": {
+    "mtime": 1777046354.7598386,
+    "ast_hash": "84feddef92f49226023b452ed1d45d68",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/common/src/main/java/com/aton/proj/gastelemetry/common/CommandsPacket.java": {
+    "mtime": 1777046330.568643,
+    "ast_hash": "09426e86b6bedfdf32338623e543072b",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/common/src/main/java/com/aton/proj/gastelemetry/common/DecodedPacket.java": {
+    "mtime": 1777046358.908858,
+    "ast_hash": "815485897057c5c7a6be51fa0a4adb9a",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/common/src/main/java/com/aton/proj/gastelemetry/common/Decoder.java": {
+    "mtime": 1777046337.7356791,
+    "ast_hash": "15a863cf5ccd7d710b7f2700db0e7a92",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/common/src/main/java/com/aton/proj/gastelemetry/common/DecoderContext.java": {
+    "mtime": 1777046343.9947712,
+    "ast_hash": "50ce6792e7c24d9139730e96faf43b46",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/common/src/main/java/com/aton/proj/gastelemetry/common/Measure.java": {
+    "mtime": 1777046349.1108816,
+    "ast_hash": "137ac28cfc476cb4d4d3ae581eb1a27e",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/common/src/main/java/com/aton/proj/gastelemetry/common/Worker.java": {
+    "mtime": 1777046315.5767775,
+    "ast_hash": "da87ab9667d6aadc59a6b68c6bb8edb4",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/common/src/main/java/com/aton/proj/gastelemetry/common/WorkerContext.java": {
+    "mtime": 1777046324.295473,
+    "ast_hash": "ab43c1f6b5f17e1ccf29e5f40439b35b",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/DecoderApplication.java": {
+    "mtime": 1777376261.9054132,
+    "ast_hash": "8cb636ec1fc218da33002a4a13ef21fb",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/EventHubConsumer.java": {
+    "mtime": 1777332456.1394687,
+    "ast_hash": "9c74e260582c3b142b8c51207fcc26dc",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/alarm/AlarmCodes.java": {
+    "mtime": 1781538826.3324025,
+    "ast_hash": "13777318f012dc3c3565668b32432eb4",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/alarm/AlarmRule.java": {
+    "mtime": 1777376118.8995528,
+    "ast_hash": "63bdd840b0354bebd535bf93428e2a21",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/alarm/BatteryLowRule.java": {
+    "mtime": 1777376166.824056,
+    "ast_hash": "b2f34b0a6b0ffff8b4df14ecece98f70",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/alarm/MissedTransmissionDetector.java": {
+    "mtime": 1777376250.7586305,
+    "ast_hash": "355361ed2b2f648e972b337edeb6eda3",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/alarm/TankLevelHighRule.java": {
+    "mtime": 1777376157.6817808,
+    "ast_hash": "bf9354bdbf4472ccf80a09fa62e7526f",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/alarm/TankLevelLowRule.java": {
+    "mtime": 1777376150.5018487,
+    "ast_hash": "615388e915109130748604fd8333629d",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/alarm/TemperatureRangeRule.java": {
+    "mtime": 1777376177.7462118,
+    "ast_hash": "1367d033a7f1ea5953eb8eaff0b59356",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/alarm/ThresholdRules.java": {
+    "mtime": 1777376142.7907615,
+    "ast_hash": "bd9353a8ab21d77531fc3ec4112ac012",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/checkpoint/InMemoryCheckpointStore.java": {
+    "mtime": 1777332416.939371,
+    "ast_hash": "ba7d62bbf1d48be4dbbf456553a1c63c",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/config/EventHubConsumerConfig.java": {
+    "mtime": 1777332436.4851272,
+    "ast_hash": "c372dcabfe5dfb15dca1bda1fff31925",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/context/DecoderContextImpl.java": {
+    "mtime": 1777376207.5630674,
+    "ast_hash": "d0c498eb495b2b4c814001ae09f53d4c",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/impl/Tek822Decoder.java": {
+    "mtime": 1782214068.2318442,
+    "ast_hash": "1af8d53cf752edc0a18f9093d6dc2d07",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/persistence/TimeSeriesService.java": {
+    "mtime": 1777375334.1235938,
+    "ast_hash": "df32aa177f6a54a8d2321d35b1bd9cac",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/resources/schema-postgresql.sql": {
+    "mtime": 1777374331.4882772,
+    "ast_hash": "163ebf6bb1c004d5bb98175ce746d217",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/test/java/com/aton/proj/gastelemetry/decoder/DecoderApplicationSmokeTest.java": {
+    "mtime": 1777352070.4225457,
+    "ast_hash": "51b59051b59dd1aab1c2c6e9b386747a",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/test/java/com/aton/proj/gastelemetry/decoder/alarm/AlarmRulesTest.java": {
+    "mtime": 1777376288.279059,
+    "ast_hash": "f33f11b810c5ace6e1031c923141e078",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/test/java/com/aton/proj/gastelemetry/decoder/alarm/MissedTransmissionDetectorTest.java": {
+    "mtime": 1777376382.3054147,
+    "ast_hash": "073a9eff427133bc12bb436f5b60a8ac",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/test/java/com/aton/proj/gastelemetry/decoder/context/DecoderContextImplTest.java": {
+    "mtime": 1777376325.5460856,
+    "ast_hash": "40802f2e83541bc6c9fbaf1193485cc4",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/test/java/com/aton/proj/gastelemetry/decoder/persistence/ConfigRepositoryTest.java": {
+    "mtime": 1777375339.6065736,
+    "ast_hash": "415d325e63c489a67aad52b2a430280d",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/test/java/com/aton/proj/gastelemetry/decoder/persistence/TimeSeriesServiceTest.java": {
+    "mtime": 1777375349.3402965,
+    "ast_hash": "4f35b2bfa8e3aad88e1944d36644d226",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/persistence/src/main/java/com/aton/proj/gastelemetry/persistence/AlarmEntity.java": {
+    "mtime": 1777375184.463723,
+    "ast_hash": "9894e2f34ce9a4327efdaf013ec07fcb",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/persistence/src/main/java/com/aton/proj/gastelemetry/persistence/AlarmRepository.java": {
+    "mtime": 1777375188.451622,
+    "ast_hash": "c9c6af5426126cac786a47eb171a199a",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/persistence/src/main/java/com/aton/proj/gastelemetry/persistence/CommandEntity.java": {
+    "mtime": 1777375103.6258657,
+    "ast_hash": "14e249b5b2cd9d08674e29e4800d8502",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/persistence/src/main/java/com/aton/proj/gastelemetry/persistence/CommandRepository.java": {
+    "mtime": 1777375121.2292788,
+    "ast_hash": "979b3757f729748ccfb8119aff8e9c6f",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/persistence/src/main/java/com/aton/proj/gastelemetry/persistence/CommandStatus.java": {
+    "mtime": 1777375077.6621819,
+    "ast_hash": "6ec9c44b7f4591c6ad45b2fe1942ba4a",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/persistence/src/main/java/com/aton/proj/gastelemetry/persistence/ConfigEntity.java": {
+    "mtime": 1777375146.1852415,
+    "ast_hash": "f5322711a446718189949f7aa9ec202a",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/persistence/src/main/java/com/aton/proj/gastelemetry/persistence/ConfigRepository.java": {
+    "mtime": 1777375153.576738,
+    "ast_hash": "dcb87691902fd9d1b205ed2b6e94ab02",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/persistence/src/main/java/com/aton/proj/gastelemetry/persistence/MeasureEntity.java": {
+    "mtime": 1777375169.38035,
+    "ast_hash": "ca6acb43367ad4dfb8fafe45797c2f11",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/persistence/src/main/java/com/aton/proj/gastelemetry/persistence/MeasureRepository.java": {
+    "mtime": 1777376226.1471138,
+    "ast_hash": "9b4d7eaba82c633e2d0fc69a31e3080c",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/WorkerApplication.java": {
+    "mtime": 1777375214.1070297,
+    "ast_hash": "eaa620583b0f716e2453c5dca3786982",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/config/EventHubProducerConfig.java": {
+    "mtime": 1777332142.567855,
+    "ast_hash": "367e7d2b1d2cfe0466f26b8616cf56f8",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/config/JacksonConfig.java": {
+    "mtime": 1777352143.6751702,
+    "ast_hash": "c4bc8d58c8933a617d231498d2a882d6",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/context/WorkerContextImpl.java": {
+    "mtime": 1777332163.3185434,
+    "ast_hash": "ca20a58591f3a0c5a1f4f197042868b4",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/impl/CommandEntry.java": {
+    "mtime": 1777286412.2377925,
+    "ast_hash": "552b3182c418b65a89a551c559556256",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/impl/Tek822Encoder.java": {
+    "mtime": 1777374521.5074844,
+    "ast_hash": "477a84ad4fc9a111e7c7a6f640432872",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/impl/Tek822Worker.java": {
+    "mtime": 1781539495.7795286,
+    "ast_hash": "73eac479cd883bd4eb4a7384df81ea04",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/persistence/CommandService.java": {
+    "mtime": 1777375242.467115,
+    "ast_hash": "ec079955fa79b82148b2bc0b8b923729",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/publisher/EventHubPrimaryDataPublisher.java": {
+    "mtime": 1777332119.5632706,
+    "ast_hash": "1613c6bba3d846e16fd2185a2ac6d928",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/publisher/LoggingPrimaryDataPublisher.java": {
+    "mtime": 1777332128.0256784,
+    "ast_hash": "463639a752f93551b33bb9495482792d",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/publisher/PrimaryDataPublisher.java": {
+    "mtime": 1777332110.4806914,
+    "ast_hash": "e936d5737b7da6876f047ead3e4d3dc6",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/java/com/aton/proj/gastelemetry/worker/server/TcpServer.java": {
+    "mtime": 1777355581.472406,
+    "ast_hash": "70fa2ad45a39bf679820d027eaabca06",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/main/resources/schema-postgresql.sql": {
+    "mtime": 1777373253.4894195,
+    "ast_hash": "f3b32ceb2ee13ab2a2ce7e90bf1823cd",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/test/java/com/aton/proj/gastelemetry/worker/WorkerApplicationSmokeTest.java": {
+    "mtime": 1777352059.6106453,
+    "ast_hash": "db27a5a5f154e6924d9f5a149b51e11f",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/test/java/com/aton/proj/gastelemetry/worker/context/WorkerContextImplTest.java": {
+    "mtime": 1777374633.9148827,
+    "ast_hash": "76b0b2d9935139b843907ad969feed85",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/test/java/com/aton/proj/gastelemetry/worker/impl/Tek822EncoderTest.java": {
+    "mtime": 1777374678.555697,
+    "ast_hash": "a4402d083a6aef144e3c0d3817d394c5",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/test/java/com/aton/proj/gastelemetry/worker/impl/Tek822WorkerTest.java": {
+    "mtime": 1781539519.124314,
+    "ast_hash": "8ccc8d3bedbf7c627a568ce75d14d937",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/test/java/com/aton/proj/gastelemetry/worker/persistence/CommandRepositoryTest.java": {
+    "mtime": 1777375274.4406798,
+    "ast_hash": "18219292a0b4bbecf9e422842cbacc15",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/test/java/com/aton/proj/gastelemetry/worker/persistence/CommandServiceTest.java": {
+    "mtime": 1777375280.2479599,
+    "ast_hash": "dbaf97e8c579d5035e89ec7fb202b2c7",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/worker/src/test/java/com/aton/proj/gastelemetry/worker/server/TcpServerFramingTest.java": {
+    "mtime": 1777355733.229728,
+    "ast_hash": "92e1682536a0b6bda4e1fa7d12dbfcb1",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1781519527.4594605,
+    "ast_hash": "3493a1d9890208db09d718e5a1ed3bf8",
+    "semantic_hash": ""
+  },
+  "_config_cmd.txt": {
+    "mtime": 1781520073.1399913,
+    "ast_hash": "1e37590c73f39f294d074db12d5e8168",
+    "semantic_hash": ""
+  },
+  "_xlsm_822.txt": {
+    "mtime": 1781520135.1204195,
+    "ast_hash": "793e544fa1162b133319ac22bbddea3f",
+    "semantic_hash": ""
+  },
+  "_xlsm_822_CC.txt": {
+    "mtime": 1781520135.1285722,
+    "ast_hash": "5c40be0658d61ec334a39b5144d7a908",
+    "semantic_hash": ""
+  },
+  "_xlsm_DASH.txt": {
+    "mtime": 1781520135.1380875,
+    "ast_hash": "cde4f3752dfcb36efcdf70cbdc8d8574",
+    "semantic_hash": ""
+  },
+  "_xlsm_DI.txt": {
+    "mtime": 1781520135.1330874,
+    "ast_hash": "e07e3f9786b1b670dfa019ddd3aeec0b",
+    "semantic_hash": ""
+  },
+  "_xlsm_HMI.txt": {
+    "mtime": 1781520135.1370857,
+    "ast_hash": "636d4f7db36dd0724fe9debad27ae41a",
+    "semantic_hash": ""
+  },
+  "_xlsm_RC.txt": {
+    "mtime": 1781520135.1310868,
+    "ast_hash": "7a6cbfb2ad0570d8920896860949be85",
+    "semantic_hash": ""
+  },
+  "configuration_and_command_v1.21.pdf": {
+    "mtime": 1759998070.0,
+    "ast_hash": "ed61a8b7b14e8c49b0ba52b7bfc95e09",
+    "semantic_hash": ""
+  },
+  "Beacon architecture and data flow.png": {
+    "mtime": 1777035634.5506282,
+    "ast_hash": "69facb74858e44c1189cea82d9e91b65",
+    "semantic_hash": ""
+  },
+  "Beacon architecture and data flow_1.png": {
+    "mtime": 1777037542.3618498,
+    "ast_hash": "1dee229c99fb67eb64d8fee2e81143c7",
+    "semantic_hash": ""
+  },
+  "_xlsm_a187.py": {
+    "mtime": 1782213760.5149584,
+    "ast_hash": "0331325ba527c64980ab1327210f3ca2",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/DecodeToolApplication.java": {
+    "mtime": 1782141556.6273744,
+    "ast_hash": "3b34faf909ebfd5fc6bed9793e124b6f",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/config/DecoderBeansConfig.java": {
+    "mtime": 1782141566.0350354,
+    "ast_hash": "a07ecfefd173ff5edc4ccd9ad6833807",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/rest/AlarmView.java": {
+    "mtime": 1782163304.0924232,
+    "ast_hash": "060957176ac112fd55587fce2d0b9c6f",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/rest/DecodeController.java": {
+    "mtime": 1782211506.0071025,
+    "ast_hash": "34bf704fda5ffb162021308a3cdc206a",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/rest/DecodeRequest.java": {
+    "mtime": 1782141604.9953537,
+    "ast_hash": "f31cfc68e3ab0538c7911c2d0fd7f655",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/rest/DecodeResponse.java": {
+    "mtime": 1782211485.173417,
+    "ast_hash": "ed954dc3556339b9933eef355cb5c4bc",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/rest/MeasureView.java": {
+    "mtime": 1782163295.926556,
+    "ast_hash": "b8f9498444d0ae72712d748e1e75ef06",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/service/HexSlicer.java": {
+    "mtime": 1782165056.8789465,
+    "ast_hash": "621bf1f3b9c2e72d698a39438c818a22",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/service/InMemoryDecoderContext.java": {
+    "mtime": 1782141576.8204072,
+    "ast_hash": "e75dee41a36e3338942aa67fa9cd934f",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/java/com/aton/proj/gastelemetry/decodetool/service/PayloadParser.java": {
+    "mtime": 1782147815.527489,
+    "ast_hash": "ed777870387bed9bb0647bd086bd6a9d",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/test/java/com/aton/proj/gastelemetry/decodetool/rest/DecodeControllerTest.java": {
+    "mtime": 1782211550.6184142,
+    "ast_hash": "ca4d105c7e5c4be668e18c439f2a6194",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/test/java/com/aton/proj/gastelemetry/decodetool/service/HexSlicerCoverageTest.java": {
+    "mtime": 1782167934.4712782,
+    "ast_hash": "cb5b8ea30f8341a845418d0431a6c46e",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/test/java/com/aton/proj/gastelemetry/decodetool/service/PayloadParserTest.java": {
+    "mtime": 1782147876.6747842,
+    "ast_hash": "0c109dd95f28d0462dcba1b2c185a7b1",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/main/java/com/aton/proj/gastelemetry/decoder/impl/FlagDecoder.java": {
+    "mtime": 1782211448.805054,
+    "ast_hash": "66e7da4f38c389e6dea4d8b7c241a1b2",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/test/java/com/aton/proj/gastelemetry/decoder/impl/FlagDecoderTest.java": {
+    "mtime": 1782211471.5992167,
+    "ast_hash": "7c0ded004f28a3fc91913eaba21471ec",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decoder/src/test/java/com/aton/proj/gastelemetry/decoder/impl/Tek822DecoderTest.java": {
+    "mtime": 1782214112.7726233,
+    "ast_hash": "d1b53be9eaceb75c8d7d673d4dec8769",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/decode-tool/src/main/resources/static/index.html": {
+    "mtime": 1782211533.704698,
+    "ast_hash": "fe2acf91282965c2f8c1dd6e117d65cf",
+    "semantic_hash": ""
+  },
+  "gas-telemetry/documentation/protocollo-tekelek-tek822.md": {
+    "mtime": 1782139690.6465871,
+    "ast_hash": "ae22616bb474ed24879945dafd19a37f",
+    "semantic_hash": ""
+  }
+}

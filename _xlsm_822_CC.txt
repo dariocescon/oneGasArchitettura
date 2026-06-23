@@ -1,0 +1,129 @@
+=== SHEET: 822 CC (149x16) ===
+R0001: Configuration commands: |  | TEK822 | Password |  |  |  |  |  |  |  |  |  |  |  | 
+R0002: General form:- | <Password>,<Settings>,<CRC><CRLF> |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0003: Example:- | Tek822,S1-02,S3=04,Z=0892<CRLF> | Note! The <CRC> field is optional. See S3 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0005: Full PFL | TEK822,S0=84,S1=00,S2=7F2000,S3=83,S4=0000,S5=0000,S6=0000,S7=00,S8=00,S9=,S10=,S11=TEK822,S12=,S13=,S14=,S15=,S16=,S17=1C20,S18=C8,S19=01,S20=00,S21=,S22=181A,S23=11,S24=00,S25=00,S26=00,S27=00,S28=,S29=08,Z=0BFE |  |  |  |  |  |  |  |  |  |  | TEK822,S0=84,S1=00,S2=7F2000,S3=83,S4=0000,S5=0000,S6=0000,S7=00,S8=00,S9=,S10=,S11=TEK822,S12=,S13=,S14=,S15=,S16=,S17=1C20,S18=C8,S19=01,S20=00,S21=,S22=181A,S23=11,S24=00,S25=00,S26=00,S27=00,S28=,S29=08 | TEK822,S0=84,S1=00,S2=7F2000,S3=83,S4=0000,S5=0000,S6=0000,S7=00,S8=00,S9=,S10=,S11=TEK822,S12=,S13=,S14=,S15=,S16=,S17=1C20,S18=C8,S19=01,S20=00,S21=,S22=181A,S23=11,S24=00,S25=00,S26=00,S27=00,S28=,S29=08,Z=0BFE |  | 
+R0008: S0: Logger
+Config | Desired logger Speed, hours, in 0.25 hour increments. Max 31 hours | 1 | bit7 | bits 6:0  |  |  |  |  |  |  |  |  |  |  | 
+R0009:  | Desired  sampling period: 0 if once per min, 1 if once every 15 mins | 1 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0010:  | Data sample once every 15 mins, Logged every 1 hours | S0=84 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0013: S1: GSM 
+Listen Config. | Desired GSM listen Period :  | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0014:  | (0) = 60 Seconds or (<= 1) = Multiples of 5  Minutes, (155 minutes max)  | S1=00 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0016:  |  |  |  |  |  |  |  |  |  |  |  |  | 0 | Once, Daily | 
+R0017: S2: 
+Schedule Configurator | This parameter defines how the ECU is configured to regularly send logged measurement data in DataMsg #4 to the remote server application |  | Sunday | Saturday | Friday | Thursday | Wednesday | Tuesday | Monday |  |  |  | 0 | Once, Daily | 
+R0018: Day to upload | Enter '1' to select  day(s) of week for data delivery, otherwise set to 0 -> |  | 1 | 1 | 1 | 1 | 1 | 1 | 1 |  |  |  | 1 | Then, Every 2 hours | 
+R0019:  | Enter Time to Dial, Hours -> | 8 | hrs | Note: If more than once per day, this will be the start time |  |  |  |  | 7F |  |  |  | 2 | Then, Every Hour | 
+R0020:  | Enter Time to Dial, Minutes (Will be rounded to 15 min intervals)-> | 0 | mins |  |  |  |  |  | 20 |  |  |  | 3 | Then, Every 4 hours | 
+R0021:  |  |  |  |  |  |  |  |  |  |  |  | 0 | 4 | Once, Daily | 
+R0022: Upload More than once per day | 0=Once in each 24 Hr period:    1=Every 2Hr,  2=every 1Hr,  3=Every 4Hr, 7=Every 12 hours | 0 | Daily |  |  |  |  |  |  |  |  |  | 5 | Then, Every 6 hours | 
+R0023:  |  |  |  |  |  |  |  |  |  |  |  |  | 6 | Then, Every 8 hours | 
+R0024:  | Enter End time (Hours) : (Ignored if once per day) (> Start Time) -> |  | 00 | 00000000 |  |  |  |  |  |  |  |  | 7 | Then, Every 12 hours | 
+R0025:  |  |  | else |  |  |  |  |  |  |  |  |  |  |  | 
+R0026: Weekly Override:
+> once per week | Override weekly schedule: Enter '1' if fortnightly or once per month delivery required. | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0027:  | Enter '1'  for once per month, on the 21st, or, enter '0'  for Fortnightly on the 1st & 14th each month | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0028:  | Configuration Command -> | S2=7F2000 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0029:  | This command set will send data to host according to schedule --> | Start 8:00 | Once, Daily |  |  |  |  |  |  |  |  |  |  |  | 
+R0031:  |  | Value | Bit# |  |  |  |  |  |  |  |  |  |  |  | 
+R0032:  | Network Comms Mode: 0=LTE CatM1, 1=LTE NB-IOT, 2=GSM, 3=Auto | 3 |  | 11 |  |  |  |  |  |  |  |  |  |  | 
+R0033: S3:
+Control Configurator | Bit #0: Send Msg #16 once per month (At the 1st scheduled opportunity, preceeding Msg #4 ) | 0 |  | 0 |  |  |  |  |  |  |  |  |  |  | 
+R0034:  | Reserved | 0 |  | 0 |  |  |  |  |  |  |  |  |  |  | 
+R0035:  | Dry contact Switch P1 (Alarm on change Enable): | 0 |  | 0 |  | 10000011 |  |  |  |  |  |  |  |  | 
+R0036:  | CRC checking of incoming data. 1=Enable Note! If set, will disable phone commands! | 0 |  | 0 |  |  |  |  |  |  |  |  |  |  | 
+R0037:  | Delivery Report: 1=Enable.  Can be used to set RTC if NITz fails | 0 |  | 0 |  |  |  |  |  |  |  |  |  |  | 
+R0038:  | Verbose TSP: 1=Enable additional TSP info | 1 |  | 1 |  |  |  |  |  |  |  |  |  |  | 
+R0039:  | Configuration Command -> | S3=83 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0041: S23:
+Msg Deliver Try Configurator |  | 5 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0042:  | TryTickets: (Try,  Nr. Of  Delivery attempts)  = | 2 | 1 | 7 max |  |  | 001 |  |  |  |  |  |  |  | 
+R0043:  | TryPeriod: Time between Tries (seconds)= | 30 | 2 | 31 max |  |  | 00010 |  |  |  |  |  |  |  | 
+R0044:  |  | S23=11 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0047: S24: 
+Schedule Delay | Data Drop Delay from Scheduled. Minutes, 14 max, i.e. 0x0E | 0 | mins |  |  |  |  |  |  |  |  |  |  |  | 
+R0048:  |  | S24=00 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0050: S4,5,6:
+Static Limit Configurator |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0051:  | Limit Polarity:
+1= alarm when measured value is higher than the threshold, 
+0= alarm when measured value is lower than the threshold | 0 | 0 |  | 0 | 0 |  | 0 | 0 |  |  |  |  |  | 
+R0052:  | 1 = Enabled, 0 = Disable. N.B. Alarm Status flags in Msg headers (byte #4) will be set, irrespectively. | 0 |  |  | 0 |  |  | 0 |  |  |  |  |  |  | 
+R0053:  | Hysteresis (up to 15 units):  | 0 |  |  | 0 |  |  | 0 |  |  |  |  |  |  | 
+R0054:  | The setting threshold for level alarm. (Unit measure is as per S26 bits, #5, #6, & #7 configuration) | 0 |  |  | 0 |  |  | 0 |  |  |  |  |  |  | 
+R0055:  | S4 Example: No Alarm set | S4=0000 |  |  | S5=0000 |  |  | S6=0000 |  |  |  |  |  |  | 
+R0058: S7,8: 
+Dynamic Limit Configurator |  |  |  |  |  |  |  | No Change Alarm |  |  |  |  |  |  | 
+R0059:  | Polarity: 1=  Alarm if Rising Units:  0= Alarm if Falling Units | 0 | 0 |  | 0 | 0 |  | 0 | 0 |  |  |  |  |  | 
+R0060:  | 1=Enabled, 0 = Disable (Alarm Status flags will be set, irrespectivly) | 0 |  |  | 0 |  |  | 0 |  |  |  |  |  |  | 
+R0061:  | Rate: Units per minute or Units per 15 minutes, depending on S0 bit7: |  |  |  |  |  |  | 0 |  |  |  | S7: Alarm Disabled | S8: Alarm Disabled | S8: Alarm Disabled | 
+R0062:  | S7: Alarm Disabled | S7=00 |  |  | S8=00 |  |  | S8=00 | -S8=00 |  |  | S7: Alarm Disabled | S8: Alarm Disabled | S8: Alarm Disabled | 
+R0063:  | S8: Alarm Disabled |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0066: The follwing Paqrameters are Ascii, with max length n, Eg (A20) = Ascii, max length =20 chars.  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0068: S9: Primary Server SMS Phone Nr. (A18) |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0069:  |  | S9= |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0070: S10: Secondary Server SMS Phone Nr. (A18) |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0071:  |  | S10= |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0072: S11: Unit Password (A6) |  | TEK822 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0073:  |  | S11=TEK822 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0074: S12: PDP APN (A29) |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0075:  |  | S12= |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0076: S13: PDP UserName (A15) |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0077:  |  | S13= |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0078: S14: PDP Password (A15) |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0079:  |  | S14= |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0080: S15: Destination Server IP address or URL (A40) |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0081:  |  | S15= |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0082: S16: Destination Server Port Num. (A5) |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0083:  |  | S16= |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0087: S17: Battery Capacity, in mA Hrs. |  | 7200 |  |  |  |  |  |  |  |  |  | Example Values |  |  | 
+R0088:  |  | S17=1C20 |  |  |  |  |  |  |  |  |  | "A" Size Capacity= |  | 3600 | AH
+R0089: S21: MCC_MNC |  |  |  |  |  |  |  |  |  |  |  | "C" Size Capacity= |  | 7700 | AH
+R0090:  |  | S21= |  |  |  |  |  |  |  |  |  | "D" Size Capacity= |  | 17500 | AH
+R0091: S22: BAND |  | 181A |  |  |  |  |  |  |  |  |  | "A+A" Size Capacity= |  | 7200 | 
+R0092:  |  | S22=181A |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0094: S20:
+E-Stop |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0095:  | For Ratiometric Guages, to calibrate Min voltage reading Out to Zero (Empty)  | 0 | Minimum Sensor Vout |  |  |  |  |  |  |  |  |  |  |  | 
+R0096:  | Sensor supply voltage output from ECU = 5.00 volts | S20=00 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0098: S18:
+F-Stop |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0099:  | For Ratiometric Guages, to calibrate Max voltage reading Out to 100(Full)  (or 1000) | 5 | Maximum Sensor Vout |  |  |  |  |  | 200 |  |  |  |  |  | 
+R0100:  | Sensor supply voltage output from ECU = 5.00 volts | S18=C8 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0103: S19:
+Control3 Configurator | Bit #0: APN Auth Type:    0=PAP or CHAP,    1=None | 1 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0104:  | Bit #1: Inhibit background beeping | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0105:  | Bit #2: Fallback to GPRS from LTE | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0106:  | Bit #3: | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0107:  | Bit #4: | 0 |  | 00000001 |  |  | 01 |  |  |  |  |  |  |  | 
+R0108:  | Bit #5: | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0109:  | Bit #6: | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0110:  | Bit #7: | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0111:  |  | S19=01 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0115: S25: Spare 2 |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0116:  |  | S25=00 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0120: S26:
+Control2 Configurator | Bit #0:Enable Temperature Alarm (Static Alarm 0) | 0 |  |  |  |  |  |  |  |  |  | Ratiometric span from 0Volts to 5Volts,  |  |  | 
+R0121:  | Bit #1: SMS Disable fallback (GPRS only) | 0 |  |  |  |  |  |  |  |  |  | Ratiometric span from 0Volts to 5Volts, Inverted Output, Low Resolution |  |  | 
+R0122:  | Bit #2: SMS Alarm only fallback | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0123:  | Bit #3: Reserved | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0124:  | Bit #4: For No Change Alarm Set / For DynLim2 Alarm Clear | 0 |  | 00000000 |  |  | 00 |  |  |  |  |  |  |  | 
+R0125:  | Bit #5: ADC Sensor1 Output:  0=Normal, 1=Inverted output reporting (see cell  note) | 0 |  | These 3 bits define the measurement units inserted into the logger |  |  |  |  |  |  |  |  |  |  | 
+R0126:  | Bit #6: ADC Sensor1 Output:  0= Low Resolution 0-100%,  1=High Res, 0-1000 | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0127:  | Bit #7: ADC Sensor1 Output:  If 0, Bits # 5,6 above apply. If 1, output is Raw 10-bit ADC (0-1023) | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0128:  | ADC1 will return Ratiometric span from 0Volts to 5Volts, Inverted Output, Low Resolution | S26=00 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0132: S27: Spare 3 |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0133:  |  | S27=00 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0136: S28: Reserved |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0137:  | Reserved |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0138:  |  | S28= |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0141: S29:
+Control4 Configurator | Bit #0 | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0142:  | Bit #1 | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0143:  | Bit #2: | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0144:  | BitLong timeframe retry (1h) if scheduled message #4 fails after all retry tickets (S23): 0=enabled, 1=disabled #3 | 1 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0145:  | Offset timer to report msg #9 after dynamic limit 1 (S7) trigger: 0=disabled, 1=15min, 2=30min, 3=60min | 0 |  | 00001000 |  |  | 08 |  |  |  |  |  |  |  | 
+R0146:  | Bit #6: | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0147:  | Bit #7: | 0 |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0148:  |  | S29=08 |  |  |  |  |  |  |  |  |  |  |  |  | 

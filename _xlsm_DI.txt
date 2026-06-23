@@ -1,0 +1,37 @@
+=== SHEET: Device info (36x2) ===
+R0001: 822 | 
+R0002: Error code | Meaning
+R0003: 1000 | TBD
+R0004: 1001 | Fails to raise a data connection after registration has completed
+R0005: 1002 | Fails to open a connection to the server
+R0006: 1003 | Fails to detect a SIM or SIM Card Error
+R0007: 1004 | TBD
+R0008: 1005 | TBD
+R0009: 1006 | Module not responding
+R0010: 1007 | TBD
+R0011: 1008 | Unable to register on Network
+R0012: 1009 | TBD
+R0013: 1010 | TBD
+R0014: 1014 | TBD
+R0015: 1015 | TBD
+R0016: 1016 | Voltage below 1500mV prior to attempting to activate context so connection abandoned.
+R0017: 586 | 
+R0018: Error code | Meaning
+R0019: 1000 | FAIL CGATT Packet domain service attach
+R0020: 1001 | FAIL CIICR GPRS or CSD call
+R0021: 1002 | FAIL CONNECT
+R0022: 1003 | CONNECTION TIMEOUT
+R0023: 1004 | FAIL CRC
+R0024: 1005 | NO LOGIN RESPONSE
+R0025: 1006 | FAIL MODULE RESPONSE
+R0026: 1007 | FAIL MODULE READY
+R0027: 1008 | FAIL LOGIN
+R0028: 1009 | FAIL CONFIG
+R0029: 1010 | TSP ABORT
+R0030: 1011 | IPD TIMEOUT
+R0031: 1012 | FAIL CONFIG CHECK
+R0032: 1013 | NETWORK LOST
+R0033: 1014 | FAIL TCP SEND
+R0034: 1015 | FAIL IP STATUS
+R0035: 1016 | FAIL CSTT
+R0036: 1017 | FAIL NO SIM

@@ -28,7 +28,7 @@ class Tek822WorkerTest {
 
         byte[] payload = Tek822Worker.composeAsciiPayload(packet);
 
-        assertThat(new String(payload, StandardCharsets.US_ASCII)).isEqualTo("TEK822,R6=02");
+        assertThat(new String(payload, StandardCharsets.US_ASCII)).isEqualTo("TEK822,R6=02\r\n");
     }
 
     @Test
@@ -43,7 +43,7 @@ class Tek822WorkerTest {
         byte[] payload = Tek822Worker.composeAsciiPayload(packet);
 
         assertThat(new String(payload, StandardCharsets.US_ASCII))
-                .isEqualTo("TEK822,S0=80,S1=01,R3=ACTIVE");
+                .isEqualTo("TEK822,S0=80,S1=01,R3=ACTIVE\r\n");
     }
 
     @Test
@@ -57,7 +57,7 @@ class Tek822WorkerTest {
         byte[] payload = Tek822Worker.composeAsciiPayload(packet);
 
         assertThat(new String(payload, StandardCharsets.US_ASCII))
-                .isEqualTo("MYPASS,S0=80,R3=ACTIVE");
+                .isEqualTo("MYPASS,S0=80,R3=ACTIVE\r\n");
     }
 
     @Test
@@ -73,7 +73,20 @@ class Tek822WorkerTest {
         byte[] payload = Tek822Worker.composeAsciiPayload(packet);
 
         assertThat(new String(payload, StandardCharsets.US_ASCII))
-                .isEqualTo("TEK822,S12=stream.co.uk,S13=streamip,S14=streamip,R3=ACTIVE");
+                .isEqualTo("TEK822,S12=stream.co.uk,S13=streamip,S14=streamip,R3=ACTIVE\r\n");
+    }
+
+    @Test
+    @DisplayName("B3 — composeAsciiPayload termina con CRLF (0x0D 0x0A) conforme XLSM '822 CC' R0002")
+    void compose_terminatesWithCrlf() {
+        CommandsPacket packet = new CommandsPacket(1, new String[]{"TEK822,R6=02"});
+
+        byte[] payload = Tek822Worker.composeAsciiPayload(packet);
+
+        // Verifica esplicita dei 2 byte terminatori
+        assertThat(payload.length).isGreaterThanOrEqualTo(2);
+        assertThat(payload[payload.length - 2]).isEqualTo((byte) 0x0D); // CR
+        assertThat(payload[payload.length - 1]).isEqualTo((byte) 0x0A); // LF
     }
 
     @Test

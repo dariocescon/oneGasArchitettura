@@ -17,6 +17,7 @@ import com.aton.proj.gastelemetry.common.DecodedPacket;
 import com.aton.proj.gastelemetry.common.Decoder;
 import com.aton.proj.gastelemetry.common.DecoderContext;
 import com.aton.proj.gastelemetry.common.Measure;
+import com.aton.proj.gastelemetry.decoder.alarm.AlarmCodes;
 
 /**
  * Decoder per la famiglia TEK822 (Tekelek).
@@ -64,9 +65,30 @@ public class Tek822Decoder implements Decoder {
     private static final Logger log = LoggerFactory.getLogger(Tek822Decoder.class);
 
     // ---- Offset header fisso (comuni a tutti i message type) ----
+    private static final int PRODUCT_TYPE_OFFSET   = 0;   // codice prodotto (0x18=TEK822 V2 NB, ecc.)
+    private static final int HW_REV_OFFSET         = 1;   // hardware revision (raw byte)
+    private static final int FW_REV_OFFSET         = 2;   // firmware revision (raw byte)
+    private static final int CONTACT_REASON_OFFSET = 3;   // bitmask motivo invio
+    private static final int ALARM_STATUS_OFFSET   = 4;   // bitmask flag allarme del device
+    private static final int CSQ_OFFSET            = 5;   // Cellular Signal Quality 0-31
     private static final int BATTERY_STATUS_OFFSET = 6;   // battery + LTE Act + RTC Set
     private static final int MSG_TYPE_BYTE         = 15;  // bits[5:0] = msgType
     private static final int MIN_HEADER_LEN        = 17;  // byte 0-16 sempre presenti
+
+    // ---- Offset diagnostiche specifiche di Msg #4/#8/#9 ----
+    private static final int MSG_COUNT_OFFSET      = 17;  // 17-18: counter messaggi uint16 BE
+    private static final int TRY_TICKETS_OFFSET    = 19;  // bits[7:5] = retry rimanenti, bits[4:0] = RTC hh
+    private static final int ENERGY_USED_OFFSET    = 20;  // 20-21: energy used uint16 BE (mAh)
+
+    // ---- Maschere bit del byte 6 (Battery/Status) ----
+    private static final int BATTERY_PERCENT_MASK  = 0x1F; // bits[4:0]
+    private static final int FLAG_RTC_SET          = 0x20; // bit 5
+
+    // ---- Maschere per i flag d'allarme del byte 4 (PDF §2.2.1.3) ----
+    private static final int FLAG_LIMIT_1     = 0x01; // bit 0
+    private static final int FLAG_LIMIT_2     = 0x02; // bit 1
+    private static final int FLAG_LIMIT_3     = 0x04; // bit 2
+    private static final int FLAG_BUND_STATUS = 0x08; // bit 3
 
     // ---- Offset aggiuntivi per msg type 4/8/9 ----
     private static final int RTC_HH_OFFSET         = 19;  // bits[4:0] = ore (bits[7:5]=tryTickets)
@@ -89,6 +111,29 @@ public class Tek822Decoder implements Decoder {
     // ---- Flag ----
     private static final int FLAG_NB_IOT           = 0x80; // byte 22 bit7
     private static final int FLAG_LTE_ACT          = 0x40; // byte 6 bit6
+
+    // ================================================================
+    //  Helper statici esposti pubblicamente
+    // ================================================================
+
+    /**
+     * Calcola la lunghezza del body dichiarata dal device a partire dai byte
+     * 15 e 16 dell'header (PDF §2.2.1).
+     *
+     * <p>Formula: {@code ((byte15 >> 4) & 0x03) × 256 + byte16}.
+     *
+     * <p>I bit 5 e 4 del byte 15 sono il contributo "alto" (× 256), il byte 16
+     * è il contributo "basso". Per i TEK822 reali il valore sta sempre in un
+     * solo byte (body < 256), quindi i bit alti sono di fatto sempre 0.
+     *
+     * @param data payload TEK822 di almeno {@value #MIN_HEADER_LEN} byte
+     * @return lunghezza body, range 0-1023
+     * @throws ArrayIndexOutOfBoundsException se {@code data} è più corto dell'header
+     */
+    public static int computeDeclaredBodyLength(byte[] data) {
+        return ((data[MSG_TYPE_BYTE] >> 4) & 0x03) * 256
+                + (data[MSG_TYPE_BYTE + 1] & 0xFF);
+    }
 
     // ================================================================
     //  Entry point
@@ -157,8 +202,26 @@ public class Tek822Decoder implements Decoder {
         List<Measure> measures = new ArrayList<>();
         List<Alarm>   alarms   = new ArrayList<>();
 
+        // Diagnostica header (byte 0-6): product type, HW/FW rev, CSQ, batteria, flag.
+        // Mirror dei campi che lo sheet "822" dell'XLSM v1.21 mostra in colonna
+        // "Description" (righe R0013-R0027).
+        measures.addAll(decodeHeaderDiagnostics(data, baseTimestamp));
+
+        // Diagnostica specifica Msg #4/#8/#9 (byte 17-21): message count, try
+        // tickets, energy used. XLSM "822" righe R0056-R0060.
+        measures.addAll(decodeMeasureMessageDiagnostics(data, baseTimestamp));
+
         // Diagnostica di rete (byte 22, 24) — riferita al timestamp della misura più recente
         measures.addAll(decodeNetworkDiagnostics(data, baseTimestamp));
+
+        // Stato/allarmi auto-segnalati dal device (byte 3 e 4): vedi fix A1.
+        // Sono indipendenti dalla nostra config: questi flag li ha settati
+        // il firmware confrontando le misure con S4/S5/S6/S7/S8 a bordo.
+        measures.add(new Measure(baseTimestamp, "contact_reason_flags",
+                data[CONTACT_REASON_OFFSET] & 0xFF, ""));
+        measures.add(new Measure(baseTimestamp, "alarm_status_flags",
+                data[ALARM_STATUS_OFFSET] & 0xFF, ""));
+        alarms.addAll(decodeDeviceAlarms(data, baseTimestamp));
 
         for (int i = 0; i < MAX_MEASURES; i++) {
             int j = PAYLOAD_OFFSET + i * BYTES_PER_MEASURE;
@@ -176,9 +239,10 @@ public class Tek822Decoder implements Decoder {
             int distance = ((data[j + 2] & 0x03) << 8) | (data[j + 3] & 0xFF);
 
             // Temperatura (°C): byte j+1 / 2.0 − 30 (mezzo grado di risoluzione)
-            // PDF sample: byte=0x5B=91 → 91/2−30 = 15.5°C
-            // (Maschera & 0x7F per sicurezza: bit 7 non documentato)
-            double temperatureC = ((data[j + 1] & 0x7F) / 2.0) - 30.0;
+            // PDF §2.2.2.2: il byte va trattato come unsigned intero (0..255),
+            // range risultante [-30.0, +97.5] °C. Una precedente maschera & 0x7F
+            // tagliava il bit 7 introducendo errori fino a 64°C su valori ≥ 0x80.
+            double temperatureC = ((data[j + 1] & 0xFF) / 2.0) - 30.0;
 
             // Aux1 = "4 major bits starting at bit 5 of byte j+2" (PDF sezione 2.2.2.2)
             //        bits[5:2] di byte j+2 — should always be 10 (sanity check)
@@ -200,6 +264,134 @@ public class Tek822Decoder implements Decoder {
     }
 
     /**
+     * Estrae le diagnostiche presenti nei byte 0-6 dell'header (validi per
+     * <i>qualsiasi</i> message type, perché l'header è condiviso).
+     *
+     * <p>Campi prodotti (tutti sotto il prefisso {@code header.}):
+     * <ul>
+     *   <li>{@code product_type} — codice prodotto raw (byte 0): es. 0x18 = TEK822 V2 NB</li>
+     *   <li>{@code hw_revision} / {@code fw_revision} — byte 1 e 2 grezzi</li>
+     *   <li>{@code csq} — Cellular Signal Quality 0-31 (byte 5)</li>
+     *   <li>{@code battery_percent} — {@code (byte6 bits[4:0]) × 100 / 31}, arrotondato a 1 decimale</li>
+     *   <li>{@code rtc_set} / {@code lte_active} — flag binari (byte 6 bit 5/6)</li>
+     * </ul>
+     *
+     * <p>Mirror dei valori mostrati dallo sheet "822" dell'XLSM v1.21.
+     */
+    private List<Measure> decodeHeaderDiagnostics(byte[] data, Instant timestamp) {
+        List<Measure> diag = new ArrayList<>();
+
+        // Byte 0 — codice prodotto + label umano (XLSM colonna H)
+        int productCode = data[PRODUCT_TYPE_OFFSET] & 0xFF;
+        diag.add(new Measure(timestamp, "header.product_type",
+                productCode, productTypeLabel(productCode)));
+
+        // Byte 1 — HW revision: PDF §2.2.1: "Major 5 bits + Minor 3 bits".
+        // L'XLSM display format è "{minor}.{major}" (es. 0x02 → "2.0") con
+        // il modem identificato dalla parte major (0=BG96, 1=BG95).
+        int b1 = data[HW_REV_OFFSET] & 0xFF;
+        int hwMinor = b1 & 0x07;        // 3 bit bassi
+        int hwMajor = (b1 >> 3) & 0x1F; // 5 bit alti
+        double hwVersion = hwMinor + hwMajor / 10.0;
+        diag.add(new Measure(timestamp, "header.hw_revision",
+                hwVersion, modemLabel(hwMajor)));
+
+        // Byte 2 — FW revision: PDF §2.2.1: "Minor 5 bits = FW Major, Major 3 bits = FW Minor".
+        // Display format "{fwMajor}.{fwMinor}" → es. 0x03 → "FW 3.0".
+        int b2 = data[FW_REV_OFFSET] & 0xFF;
+        int fwMajor = b2 & 0x1F;        // 5 bit bassi
+        int fwMinor = (b2 >> 5) & 0x07; // 3 bit alti
+        double fwVersion = fwMajor + fwMinor / 10.0;
+        diag.add(new Measure(timestamp, "header.fw_revision",
+                fwVersion, "FW " + fwMajor + "." + fwMinor));
+
+        // Byte 5 — RSSI (la colonna XLSM è etichettata "GSM Rssi")
+        diag.add(new Measure(timestamp, "header.gsm_rssi", data[CSQ_OFFSET] & 0xFF, ""));
+
+        // Byte 6 — Battery percentage. XLSM mostra "70,97% Capacity Remaining"
+        // (2 decimali); usiamo la stessa precisione.
+        int b6 = data[BATTERY_STATUS_OFFSET] & 0xFF;
+        double batteryPercent = ((b6 & BATTERY_PERCENT_MASK) * 100.0) / 31.0;
+        diag.add(new Measure(timestamp, "header.battery_percent",
+                Math.round(batteryPercent * 100.0) / 100.0, "% Capacity Remaining"));
+        diag.add(new Measure(timestamp, "header.rtc_set",
+                (b6 & FLAG_RTC_SET) != 0 ? 1 : 0, ""));
+        diag.add(new Measure(timestamp, "header.lte_active",
+                (b6 & FLAG_LTE_ACT) != 0 ? 1 : 0, ""));
+
+        return diag;
+    }
+
+    /**
+     * Mappa il codice prodotto (byte 0) al modello commerciale come fa la
+     * colonna I dello sheet "822" XLSM.
+     */
+    private static String productTypeLabel(int code) {
+        return switch (code) {
+            case 0x07 -> "TEK586";
+            case 0x08 -> "TEK822 V1";
+            case 0x09 -> "TEK643";
+            case 0x0B -> "TEK733";
+            case 0x0C -> "TEK811";
+            case 0x10 -> "TEK898";
+            case 0x11 -> "TEK871";
+            case 0x12 -> "TEK733A";
+            case 0x13 -> "TEK871A";
+            case 0x14 -> "TEK811A";
+            case 0x17 -> "TEK822 V1 BTN";
+            case 0x18 -> "TEK822 V2 NB";
+            default   -> String.format("Unknown (0x%02X)", code);
+        };
+    }
+
+    /**
+     * Mappa la parte major dell'HW revision (byte 1 bits[7:3]) al modem
+     * cellulare integrato, come fa la colonna I dello sheet "822" XLSM.
+     */
+    private static String modemLabel(int hwMajor) {
+        return switch (hwMajor) {
+            case 0 -> "BG96";
+            case 1 -> "BG95";
+            default -> "HW major=" + hwMajor;
+        };
+    }
+
+    /**
+     * Estrae le diagnostiche specifiche dei messaggi #4/#8/#9 dai byte 17-21.
+     *
+     * <p>Campi prodotti:
+     * <ul>
+     *   <li>{@code header.message_count} — counter cumulativo del device (byte 17-18 BE)</li>
+     *   <li>{@code header.try_tickets_remaining} — retry rimanenti (byte 19 bits[7:5])</li>
+     *   <li>{@code header.energy_used_mah} — energia consumata in mAh (byte 20-21 BE)</li>
+     * </ul>
+     *
+     * <p>Il metodo verifica la lunghezza del payload prima di leggere ciascun byte.
+     */
+    private List<Measure> decodeMeasureMessageDiagnostics(byte[] data, Instant timestamp) {
+        List<Measure> diag = new ArrayList<>();
+
+        if (data.length > MSG_COUNT_OFFSET + 1) {
+            int msgCount = ((data[MSG_COUNT_OFFSET] & 0xFF) << 8)
+                    | (data[MSG_COUNT_OFFSET + 1] & 0xFF);
+            diag.add(new Measure(timestamp, "header.message_count", msgCount, ""));
+        }
+
+        if (data.length > TRY_TICKETS_OFFSET) {
+            int tryTickets = (data[TRY_TICKETS_OFFSET] >> 5) & 0x07;
+            diag.add(new Measure(timestamp, "header.try_tickets_remaining", tryTickets, ""));
+        }
+
+        if (data.length > ENERGY_USED_OFFSET + 1) {
+            int energyMah = ((data[ENERGY_USED_OFFSET] & 0xFF) << 8)
+                    | (data[ENERGY_USED_OFFSET + 1] & 0xFF);
+            diag.add(new Measure(timestamp, "header.energy_used_mah", energyMah, "mAh"));
+        }
+
+        return diag;
+    }
+
+    /**
      * Decodifica le informazioni diagnostiche di rete dai byte 22 e 24.
      *
      * Byte 22 (XLSM "822" C61): tecnologia di rete utilizzata.
@@ -214,16 +406,26 @@ public class Tek822Decoder implements Decoder {
 
         if (data.length > NETWORK_TECH_OFFSET) {
             int b22 = data[NETWORK_TECH_OFFSET] & 0xFF;
-            // Codifica tecnologia come valore numerico: 0=2G, 1=CAT-M, 2=NB-IoT
+            // Codifica tecnologia: bit 7 del byte 22 → NB-IoT.
+            // Se bit 7 = 0, distinguiamo CAT-M (LTE Act = 1) da 2G (LTE Act = 0).
+            // L'XLSM mostra le label "NB" / "CATM" / "GSM" — riportiamole nel campo unit.
             int techCode;
+            String techLabel;
             if ((b22 & FLAG_NB_IOT) != 0) {
                 techCode = 2;
+                techLabel = "NB";
             } else if ((data[BATTERY_STATUS_OFFSET] & FLAG_LTE_ACT) != 0) {
                 techCode = 1;
+                techLabel = "CATM";
             } else {
                 techCode = 0;
+                techLabel = "GSM";
             }
-            diag.add(new Measure(timestamp, "network.tech_code", techCode, ""));
+            diag.add(new Measure(timestamp, "network.tech_code", techCode, techLabel));
+
+            // MNC: i 4 bit bassi del byte 22 codificano l'operator short code
+            // (XLSM colonna "NB/MNC" — per byte 0xFF mostra "15" = 0xFF & 0x0F).
+            diag.add(new Measure(timestamp, "network.mnc", b22 & 0x0F, ""));
         }
 
         if (data.length > LOGIN_TIME_OFFSET) {
@@ -232,6 +434,41 @@ public class Tek822Decoder implements Decoder {
         }
 
         return diag;
+    }
+
+    /**
+     * Estrae gli allarmi che il device stesso ha segnalato nel byte 4 dell'header
+     * (PDF §2.2.1.3, XLSM sheet "822" colonna "Alarm/Status").
+     *
+     * Sono <b>indipendenti</b> dagli allarmi calcolati server-side ({@link AlarmRule}):
+     * questi flag riflettono il superamento delle soglie configurate <i>sul device</i>
+     * (registri S4/S5/S6 statici, S7/S8 dinamici). Possono essere settati anche su
+     * Msg #4 normali, non solo su Msg #8.
+     *
+     * @param data           payload TEK822
+     * @param timestamp      timestamp di riferimento (base RTC del messaggio)
+     */
+    private List<Alarm> decodeDeviceAlarms(byte[] data, Instant timestamp) {
+        List<Alarm> out = new ArrayList<>();
+        int flags = data[ALARM_STATUS_OFFSET] & 0xFF;
+
+        if ((flags & FLAG_LIMIT_1) != 0) {
+            out.add(new Alarm(timestamp, AlarmCodes.ALARM_DEVICE_LIMIT_1,
+                    "Device static limit 1 (S4) triggered"));
+        }
+        if ((flags & FLAG_LIMIT_2) != 0) {
+            out.add(new Alarm(timestamp, AlarmCodes.ALARM_DEVICE_LIMIT_2,
+                    "Device static limit 2 (S5) triggered"));
+        }
+        if ((flags & FLAG_LIMIT_3) != 0) {
+            out.add(new Alarm(timestamp, AlarmCodes.ALARM_DEVICE_LIMIT_3,
+                    "Device static limit 3 (S6) triggered"));
+        }
+        if ((flags & FLAG_BUND_STATUS) != 0) {
+            out.add(new Alarm(timestamp, AlarmCodes.ALARM_DEVICE_BUND_STATUS,
+                    "Bund switch state changed"));
+        }
+        return out;
     }
 
     /**
@@ -302,14 +539,28 @@ public class Tek822Decoder implements Decoder {
         for (String setting : ascii.split(",")) {
             if (!setting.contains("=")) continue;
             String[] parts = setting.split("=", 2);
-            String key   = "setting." + parts[0].trim();
-            String value = parts.length > 1 ? parts[1].trim() : "";
-            try {
-                measures.add(new Measure(now, key, Double.parseDouble(value), ""));
-            } catch (NumberFormatException e) {
-                // Valori non numerici (es. APN, hostname) non inseribili come Measure
-                log.debug("Setting non numerico ignorato — {}={}", key, value);
+            String key      = "setting." + parts[0].trim();
+            String rawValue = parts.length > 1 ? parts[1].trim() : "";
+
+            // Strategia: emettiamo SEMPRE una Measure per ogni Sx trovato.
+            //   - value = valore numerico parsato come HEX (PDF §3.20).
+            //             Esempi: S0=80 → 0x80=128, S22=181A → 0x181A=6170.
+            //   - unit  = la stringa ASCII originale, sempre preservata.
+            //
+            // Per i registri non-hex (S9 phone, S11 password, S12 APN, S15 IP,
+            // settings vuoti, ecc.) il parse genera NumberFormatException:
+            // teniamo value=0 e usiamo unit per non perdere l'informazione.
+            // Questo evita la perdita di dati operativamente importanti
+            // come l'APN e l'IP del server.
+            double numericValue = 0.0;
+            if (!rawValue.isEmpty()) {
+                try {
+                    numericValue = Long.parseLong(rawValue, 16);
+                } catch (NumberFormatException e) {
+                    log.debug("Setting ASCII (non-hex) preservato in unit — {}={}", key, rawValue);
+                }
             }
+            measures.add(new Measure(now, key, numericValue, rawValue));
         }
 
         log.debug("Msg type 6: parsati {} setting(s)", measures.size());
@@ -404,13 +655,15 @@ public class Tek822Decoder implements Decoder {
 
     /**
      * Estrae il payload ASCII per msg type 6/16/17.
-     * I byte a partire da ASCII_PAYLOAD_START (17) sono caratteri ASCII diretti.
+     * I byte a partire da ASCII_PAYLOAD_START (17) sono caratteri ASCII diretti
+     * fino agli ultimi 2 byte, riservati al CRC (vedi XLSM sheet "822" celle G94/G95).
      * Rimuove la virgola iniziale se presente (alcuni campi iniziano con ',').
      */
     private String extractAsciiPayload(byte[] data) {
-        if (data.length <= ASCII_PAYLOAD_START) return "";
+        int end = data.length - CRC_TRAILER_LEN;
+        if (end <= ASCII_PAYLOAD_START) return "";
         String raw = new String(data, ASCII_PAYLOAD_START,
-                data.length - ASCII_PAYLOAD_START, StandardCharsets.US_ASCII);
+                end - ASCII_PAYLOAD_START, StandardCharsets.US_ASCII);
         return raw.startsWith(",") ? raw.substring(1) : raw;
     }
 

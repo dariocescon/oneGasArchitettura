@@ -25,6 +25,15 @@ public final class AlarmCodes {
     public static final String ALARM_TEMPERATURE_OUT_RANGE = "TEMPERATURE_OUT_OF_RANGE";
     public static final String ALARM_MISSED_TRANSMISSION   = "MISSED_TRANSMISSION";
 
+    // ---- Allarmi auto-segnalati dal device TEK822 (byte 4 dell'header) ----
+    // Vedi PDF §2.2.1.3 e XLSM sheet "822" colonna "Alarm/Status".
+    // Questi flag sono settati dal firmware quando una misura supera le soglie
+    // configurate sui registri S4/S5/S6 del device (NON sui nostri config server-side).
+    public static final String ALARM_DEVICE_LIMIT_1        = "DEVICE_LIMIT_1";       // S4 superato
+    public static final String ALARM_DEVICE_LIMIT_2        = "DEVICE_LIMIT_2";       // S5 superato
+    public static final String ALARM_DEVICE_LIMIT_3        = "DEVICE_LIMIT_3";       // S6 superato
+    public static final String ALARM_DEVICE_BUND_STATUS    = "DEVICE_BUND_STATUS";   // sportellino contenitivo
+
     // ---- chiavi di configurazione (tabella device_config) ----
     public static final String CFG_TANK_LOW_THRESHOLD     = "alarm.tank.low_threshold";
     public static final String CFG_TANK_HIGH_THRESHOLD    = "alarm.tank.high_threshold";

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>TEK822 Decode Tool</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --fg: #222;
+            --accent: #0288d1;
+            --error: #c62828;
+            --success: #2e7d32;
+            --muted: #777;
+            --border: #ddd;
+            --card-bg: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg); color: var(--fg);
+            max-width: 1200px; margin: 24px auto; padding: 0 16px;
+        }
+        h1 { margin-top: 0; font-weight: 600; }
+        .subtitle { color: var(--muted); margin-bottom: 24px; }
+        textarea {
+            width: 100%; box-sizing: border-box;
+            min-height: 120px; padding: 12px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 13px;
+            border: 1px solid var(--border); border-radius: 6px;
+            background: var(--card-bg);
+        }
+        button {
+            background: var(--accent); color: white; border: none;
+            padding: 10px 20px; border-radius: 6px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            margin-top: 8px;
+        }
+        button:hover { background: #0277bd; }
+        button:disabled { background: #aaa; cursor: not-allowed; }
+        .card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 6px; padding: 16px; margin-top: 16px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td {
+            text-align: left; padding: 6px 8px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        th { background: #f0f0f0; font-weight: 600; }
+        td.mono { font-family: "SFMono-Regular", Consolas, monospace; }
+        td.hex-cell {
+            font-family: "SFMono-Regular", Consolas, monospace;
+            background: #fffbea; color: #b26a00;
+            white-space: nowrap;
+        }
+        td.byte-cell {
+            font-family: "SFMono-Regular", Consolas, monospace;
+            background: #eef5ff; color: #0d47a1;
+            white-space: nowrap; text-align: center;
+            font-weight: 600;
+        }
+        .alarm-row { background: #fff4f4; }
+        .err { color: var(--error); margin-top: 12px; }
+        .ok { color: var(--success); font-size: 13px; margin-top: 4px; }
+        .section-title {
+            font-weight: 600; margin-bottom: 8px; font-size: 14px;
+            color: var(--accent);
+        }
+        details summary { cursor: pointer; user-select: none; margin: 8px 0; }
+    </style>
+</head>
+<body>
+
+<h1>TEK822 Decode Tool</h1>
+<div class="subtitle">
+    Incolla la stringa esadecimale di un payload Tekelek TEK822 e ottieni la
+    decodifica completa con visualizzazione dei byte sorgente per ogni campo.
+</div>
+
+<label for="hex-input"><strong>Payload esadecimale</strong></label>
+<textarea id="hex-input" placeholder="es. 180203418919360864431047987054047B093248000BFF8103000A682BFE..."></textarea>
+
+<button id="decode-btn">Decodifica</button>
+<div id="status"></div>
+
+<div id="results" style="display: none;">
+    <div class="card">
+        <div class="section-title">Header</div>
+        <div id="header-block"></div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">Allarmi auto-segnalati dal device</div>
+        <div id="alarms-block"></div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">Diagnostica header (byte 0-6, 17-25)</div>
+        <div id="header-diag-block"></div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">Misure time-series (byte 26+, slot da 4 byte)</div>
+        <div id="measures-block"></div>
+    </div>
+
+    <details>
+        <summary>Mostra JSON grezzo della risposta</summary>
+        <pre id="raw-json" class="card" style="font-size: 12px; overflow-x: auto;"></pre>
+    </details>
+</div>
+
+<script>
+    const btn = document.getElementById('decode-btn');
+    const input = document.getElementById('hex-input');
+    const statusDiv = document.getElementById('status');
+    const results = document.getElementById('results');
+
+    btn.addEventListener('click', async () => {
+        const hex = input.value.trim();
+        if (!hex) {
+            statusDiv.innerHTML = '<div class="err">Inserire una stringa hex.</div>';
+            results.style.display = 'none';
+            return;
+        }
+        btn.disabled = true;
+        statusDiv.textContent = 'Decodifica in corso...';
+        results.style.display = 'none';
+
+        try {
+            const resp = await fetch('/api/decode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hex })
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                statusDiv.innerHTML = '<div class="err">Errore: ' + (data.error || resp.status) + '</div>';
+                return;
+            }
+
+            statusDiv.innerHTML = '<div class="ok">Decodifica completata.</div>';
+            renderResults(data);
+            results.style.display = 'block';
+        } catch (e) {
+            statusDiv.innerHTML = '<div class="err">Errore di rete: ' + e.message + '</div>';
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    function renderResults(data) {
+        // Header table
+        const headerBlock = document.getElementById('header-block');
+        const headerRows = [
+            { field: 'Device ID (IMEI BCD raw)', hex: data.deviceIdSourceHex,           range: data.deviceIdByteRange,           value: data.deviceId,                   note: 'IMEI raw 16 cifre' },
+            { field: 'Message Type',             hex: data.messageTypeSourceHex,        range: data.messageTypeByteRange,        value: data.messageType,                note: '#' + data.messageType + ' ' + messageTypeLabel(data.messageType) },
+            { field: 'Body Length (dichiarato)', hex: data.declaredBodyLengthSourceHex, range: data.declaredBodyLengthByteRange, value: data.declaredBodyLength + ' byte', note: 'byte 16 (+ bits[5:4] di B15 × 256, in pratica = 0)' },
+            { field: 'Total Bytes (ricevuti)',   hex: '—',                              range: '—',                              value: data.totalBytes + ' byte',       note: 'header + body + CRC' },
+            { field: 'Contact Reason',           hex: data.contactReasonHex,            range: data.contactReasonByteRange,      value: '0x' + data.contactReasonHex,    note: formatFlags(data.contactReasonFlags) },
+            { field: 'Alarm Status',             hex: data.alarmStatusHex,              range: data.alarmStatusByteRange,        value: '0x' + data.alarmStatusHex,      note: formatFlags(data.alarmStatusFlags) },
+        ];
+        headerBlock.innerHTML = renderHeaderTable(headerRows);
+
+        // Allarmi
+        const alBlock = document.getElementById('alarms-block');
+        if (data.alarms && data.alarms.length > 0) {
+            let html = '<table><thead><tr><th>Timestamp</th><th>Hex</th><th>Byte</th><th>Codice</th><th>Descrizione</th></tr></thead><tbody>';
+            data.alarms.forEach(a => {
+                html += '<tr class="alarm-row">'
+                     + '<td class="mono">' + a.timestamp + '</td>'
+                     + '<td class="hex-cell">' + (a.sourceHex || '—') + '</td>'
+                     + '<td class="byte-cell">' + (a.byteRange || '—') + '</td>'
+                     + '<td class="mono">' + a.alarmCode + '</td>'
+                     + '<td>' + a.description + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            alBlock.innerHTML = html;
+        } else {
+            alBlock.innerHTML = '<em style="color: var(--muted);">Nessun allarme presente nel payload.</em>';
+        }
+
+        // Le measure con prefisso "header." o "network." o le bitmask raw vanno nella sezione diagnostica.
+        const headerDiag = (data.measures || []).filter(m =>
+            m.obisCode.startsWith('header.')
+            || m.obisCode.startsWith('network.')
+            || m.obisCode === 'contact_reason_flags'
+            || m.obisCode === 'alarm_status_flags');
+        const tsMeasures = (data.measures || []).filter(m => !headerDiag.includes(m));
+
+        renderMeasureTable('header-diag-block', headerDiag, 'Nessuna diagnostica header presente.');
+        renderMeasureTable('measures-block', tsMeasures, 'Nessuna misura time-series nel payload.');
+
+        // JSON raw
+        document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
+    }
+
+    function renderHeaderTable(rows) {
+        let html = '<table><thead><tr><th>Campo</th><th>Hex</th><th>Byte</th><th>Valore</th><th>Note</th></tr></thead><tbody>';
+        rows.forEach(r => {
+            html += '<tr>'
+                 + '<td>' + r.field + '</td>'
+                 + '<td class="hex-cell">' + (r.hex || '—') + '</td>'
+                 + '<td class="byte-cell">' + (r.range || '—') + '</td>'
+                 + '<td class="mono">' + r.value + '</td>'
+                 + '<td>' + (r.note || '') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function renderMeasureTable(elementId, measures, emptyMsg) {
+        const el = document.getElementById(elementId);
+        if (!measures || measures.length === 0) {
+            el.innerHTML = '<em style="color: var(--muted);">' + emptyMsg + '</em>';
+            return;
+        }
+        let html = '<table><thead><tr><th>Timestamp</th><th>OBIS Code</th><th>Hex</th><th>Byte</th><th>Valore</th><th>Unità / Label</th></tr></thead><tbody>';
+        measures.forEach(m => {
+            html += '<tr>'
+                 + '<td class="mono">' + m.timestamp + '</td>'
+                 + '<td class="mono">' + m.obisCode + '</td>'
+                 + '<td class="hex-cell">' + (m.sourceHex || '—') + '</td>'
+                 + '<td class="byte-cell">' + (m.byteRange || '—') + '</td>'
+                 + '<td>' + m.value + '</td>'
+                 + '<td>' + (m.unit || '') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    }
+
+    function messageTypeLabel(t) {
+        const labels = {
+            4: '(scheduled measure delivery)',
+            6: '(settings dump)',
+            8: '(alarm / manual wakeup)',
+            9: '(dynamic alarm offset)',
+            16: '(stats)',
+            17: '(GPS)'
+        };
+        return labels[t] || '(unknown)';
+    }
+
+    // I flag dei byte 3 e 4 sono decodificati server-side dal modulo decoder
+    // (FlagDecoder) ed esposti come array nella risposta REST. Qui ci limitiamo
+    // a renderizzarli.
+    function formatFlags(flags) {
+        if (!flags || flags.length === 0) return '';
+        return '[' + flags.join(' + ') + ']';
+    }
+</script>
+
+</body>
+</html>

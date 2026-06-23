@@ -1,0 +1,17 @@
+=== SHEET: HMI (18x19) ===
+R0001:  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | h
+R0002:  |  | LED Feedback -  |  |  |  |  |  |  | No Level Change Alarm -  |  |  |  |  |  |  |  |  | 
+R0003:  |  | Note: LED feedback, as described below, only applies following a manual activation of the device. |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0004:  |  |  |  |  |  |  |  |  | What is required by the customer : |  |  |  |  |  |  |  |  | 
+R0005:  |  |  |  |  |  |  |  |  | The customer wants an alarm to be triggered if the level does not drop within a defined time period. This is defined as if the previous X readings are within +/- Y cm (minimum 5cm) of the most recent readings then a “No Level Change Alarm” will be triggered. This in turn will generate an off-schedule contact to the server. |  |  |  |  |  |  |  |  | 
+R0006:  |  | Device State |  |  | LED Status |  |  |  |  |  |  |  |  |  |  |  |  | 
+R0007:  |  |  |  |  |  |  |  |  | Why Do they want it: |  |  |  |  |  |  |  |  | 
+R0008:  |  | LED and Buzzer Test |  |  | When a manget is initally held to the unit the LED will show GREEN solid followed by RED solid. If the magnet is held to the unit for longer then the unit will enter server data drop mode. |  |  |  | In the event that fluid is not been drawn from the tank due to a fault in the outlet or downstream equipment the customer needs to be notified of this. This in turn will allow them to better manage their maintenance schedule which is of great importance to the customer.      |  |  |  |  |  |  |  |  | 
+R0010:  |  | Awake, connected to a 2G/3G GSM network but not in a GPRS session with the server |  |  | RED on Solid |  |  |  | Other Factors that should be noted: |  |  |  |  |  |  |  |  | 
+R0011:  |  |  |  |  |  |  |  | ·         The Alarm only needs to be trigger on a falling level. (FW allows both directions to be set) |  |  |  |  |  |  |  |  |  | 
+R0012:  |  | GSM Awake Datapacket was transmitted succesfully and go ACTIVE command was successfully received |  |  | GREEN on Solid |  |  | ·         While waiting for a falling level if the tank is filled the Alarm parameters should be reset. |  |  |  |  |  |  |  |  |  | 
+R0013:  |  |  |  |  |  |  |  | ·         A fixed level can be used i.e. it can be hardcoded and not User changeable. 5cm is a level agreeable to the customer. (FW allows user adjustable parameter) |  |  |  |  |  |  |  |  |  | 
+R0014:  |  | GSM Awake Datapacket was transmitted succesfully and go ACTIVE command was NOT successfully received. This can happen in the event of SMS Fallback. |  |  | RED Flashing |  |  | ·         The longest timeframe envisioned by the customer is 3 – 4 days. Ideally this timeframe should be user changeable via the server. |  |  |  |  |  |  |  |  |  | 
+R0015:  |  |  |  |  |  |  |  | ·         There is only a requirement for one “No Level Change Alarm” |  |  |  |  |  |  |  |  |  | 
+R0016:  |  | After the TCP session has finshed |  |  | NO LED on |  |  | ·         At least one Dynamic Alarm is still required. |  |  |  |  |  |  |  |  |  | 
+R0017:  |  |  |  |  |  |  |  | ·         Ideally all Threshold Alarms need to be maintained. |  |  |  |  |  |  |  |  |  | 

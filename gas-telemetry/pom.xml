@@ -24,6 +24,7 @@
         <module>worker</module>
         <module>decoder</module>
         <module>command-api</module>
+        <module>decode-tool</module>
     </modules>
 
     <properties>
