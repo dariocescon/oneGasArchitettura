@@ -50,6 +50,44 @@
             </exclusions>
         </dependency>
 
+        <!-- Riuso della logica di encoding esistente. Stesse esclusioni del decoder
+             (Tek822Encoder e CommandEntry non hanno bisogno di JPA / Event Hub). -->
+        <dependency>
+            <groupId>com.aton.proj</groupId>
+            <artifactId>gas-telemetry-worker</artifactId>
+            <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.aton.proj</groupId>
+                    <artifactId>gas-telemetry-persistence</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-data-jpa</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.azure</groupId>
+                    <artifactId>azure-messaging-eventhubs</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-integration</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.integration</groupId>
+                    <artifactId>spring-integration-ip</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.postgresql</groupId>
+                    <artifactId>postgresql</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.h2database</groupId>
+                    <artifactId>h2</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <!-- Spring Boot Web: REST + serve la pagina HTML statica -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>TEK822 Decode Tool</title>
+    <title>TEK822 Debug Tool</title>
     <style>
         :root {
             --bg: #fafafa;
@@ -21,22 +21,54 @@
         }
         h1 { margin-top: 0; font-weight: 600; }
         .subtitle { color: var(--muted); margin-bottom: 24px; }
-        textarea {
+
+        /* Top navigation */
+        nav.top-nav {
+            display: flex; gap: 4px; margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+        }
+        nav.top-nav button {
+            background: transparent; color: var(--fg); border: none;
+            padding: 12px 24px; font-size: 15px; font-weight: 600; cursor: pointer;
+            border-bottom: 3px solid transparent; margin-bottom: -2px;
+            border-radius: 0;
+        }
+        nav.top-nav button:hover { background: #f0f0f0; }
+        nav.top-nav button.active {
+            color: var(--accent); border-bottom-color: var(--accent);
+        }
+
+        textarea, input, select {
             width: 100%; box-sizing: border-box;
-            min-height: 120px; padding: 12px;
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-            font-size: 13px;
+            padding: 10px 12px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
             border: 1px solid var(--border); border-radius: 6px;
             background: var(--card-bg);
         }
-        button {
+        textarea {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 13px; min-height: 120px;
+        }
+        button.primary {
             background: var(--accent); color: white; border: none;
             padding: 10px 20px; border-radius: 6px;
             font-size: 14px; font-weight: 600; cursor: pointer;
             margin-top: 8px;
         }
-        button:hover { background: #0277bd; }
-        button:disabled { background: #aaa; cursor: not-allowed; }
+        button.primary:hover { background: #0277bd; }
+        button.primary:disabled { background: #aaa; cursor: not-allowed; }
+        button.secondary {
+            background: #f0f0f0; color: var(--fg); border: 1px solid var(--border);
+            padding: 6px 12px; border-radius: 4px; font-size: 13px;
+            cursor: pointer; margin-left: 4px;
+        }
+        button.secondary:hover { background: #e0e0e0; }
+        button.danger {
+            background: transparent; color: var(--error); border: 1px solid var(--error);
+            padding: 4px 10px; border-radius: 4px; font-size: 12px;
+            cursor: pointer;
+        }
         .card {
             background: var(--card-bg); border: 1px solid var(--border);
             border-radius: 6px; padding: 16px; margin-top: 16px;
@@ -68,188 +100,612 @@
             color: var(--accent);
         }
         details summary { cursor: pointer; user-select: none; margin: 8px 0; }
+        .form-row { margin-bottom: 12px; }
+        .form-row label {
+            display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;
+            color: var(--muted);
+        }
+        .cmd-card {
+            border: 1px solid var(--border); border-radius: 6px;
+            background: #fdfdfd; padding: 12px; margin-bottom: 10px;
+            position: relative;
+        }
+        .cmd-card-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 12px;
+        }
+        .cmd-card-header .cmd-num {
+            background: var(--accent); color: white;
+            border-radius: 50%; width: 24px; height: 24px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 12px;
+        }
+        .cmd-card-header select { flex: 1; }
+        .cmd-params { padding-left: 12px; }
+        .cmd-params .form-row { margin-bottom: 8px; }
+        .sub-tabs {
+            display: flex; gap: 4px; margin-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sub-tabs button {
+            background: transparent; border: none; padding: 8px 16px;
+            cursor: pointer; font-size: 13px;
+            border-bottom: 2px solid transparent; margin-bottom: -1px;
+        }
+        .sub-tabs button.active {
+            color: var(--accent); border-bottom-color: var(--accent);
+        }
+        pre.composed {
+            background: #f5f5f5; padding: 12px; border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px;
+            overflow-x: auto; margin: 0;
+            white-space: pre-wrap; word-break: break-all;
+        }
+        .crlf-marker {
+            color: #b26a00; background: #fffbea;
+            padding: 0 4px; border-radius: 2px;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
 
-<h1>TEK822 Decode Tool</h1>
+<h1>TEK822 Debug Tool</h1>
 <div class="subtitle">
-    Incolla la stringa esadecimale di un payload Tekelek TEK822 e ottieni la
-    decodifica completa con visualizzazione dei byte sorgente per ogni campo.
+    Ausilio di debugging per il protocollo Tekelek TEK822. Decodifica payload device → server
+    e composizione comandi server → device.
 </div>
 
-<label for="hex-input"><strong>Payload esadecimale</strong></label>
-<textarea id="hex-input" placeholder="es. 180203418919360864431047987054047B093248000BFF8103000A682BFE..."></textarea>
+<nav class="top-nav">
+    <button id="nav-decode" class="active" data-view="decode">Decode</button>
+    <button id="nav-encode" data-view="encode">Encode</button>
+</nav>
 
-<button id="decode-btn">Decodifica</button>
-<div id="status"></div>
+<!-- ======================== DECODE VIEW ======================== -->
+<section id="view-decode">
+    <label for="hex-input"><strong>Payload esadecimale</strong></label>
+    <textarea id="hex-input" placeholder="es. 180203418919360864431047987054047B093248000BFF8103000A682BFE..."></textarea>
 
-<div id="results" style="display: none;">
-    <div class="card">
-        <div class="section-title">Header</div>
-        <div id="header-block"></div>
+    <button class="primary" id="decode-btn">Decodifica</button>
+    <div id="decode-status"></div>
+
+    <div id="decode-results" style="display: none;">
+        <div class="card">
+            <div class="section-title">Header</div>
+            <div id="header-block"></div>
+        </div>
+        <div class="card">
+            <div class="section-title">Allarmi auto-segnalati dal device</div>
+            <div id="alarms-block"></div>
+        </div>
+        <div class="card">
+            <div class="section-title">Diagnostica header (byte 0-6, 17-25)</div>
+            <div id="header-diag-block"></div>
+        </div>
+        <div class="card">
+            <div class="section-title">Misure time-series (byte 26+, slot da 4 byte)</div>
+            <div id="measures-block"></div>
+        </div>
+        <details>
+            <summary>Mostra JSON grezzo della risposta</summary>
+            <pre id="raw-json" class="card" style="font-size: 12px; overflow-x: auto;"></pre>
+        </details>
+    </div>
+</section>
+
+<!-- ======================== ENCODE VIEW ======================== -->
+<section id="view-encode" hidden>
+    <div class="sub-tabs">
+        <button id="encode-tab-form" class="active" data-tab="form">Form guidato</button>
+        <button id="encode-tab-json" data-tab="json">Raw JSON</button>
     </div>
 
-    <div class="card">
-        <div class="section-title">Allarmi auto-segnalati dal device</div>
-        <div id="alarms-block"></div>
+    <!-- Form mode -->
+    <div id="encode-form-mode">
+        <div class="card">
+            <div class="section-title">Target device</div>
+            <div class="form-row">
+                <label>Device ID (IMEI o alias)</label>
+                <input id="enc-device-id" type="text" placeholder="es. 0864431047987054">
+            </div>
+            <div class="form-row">
+                <label>Device Type</label>
+                <input id="enc-device-type" type="text" value="TEK822V2">
+            </div>
+            <div class="form-row">
+                <label>Password (S11 del device)</label>
+                <input id="enc-password" type="text" value="TEK822">
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">Comandi da inviare</div>
+            <div id="cmd-list"></div>
+            <button class="secondary" id="add-cmd-btn">+ Aggiungi comando</button>
+        </div>
     </div>
 
-    <div class="card">
-        <div class="section-title">Diagnostica header (byte 0-6, 17-25)</div>
-        <div id="header-diag-block"></div>
+    <!-- Raw JSON mode -->
+    <div id="encode-json-mode" hidden>
+        <div class="card">
+            <div class="section-title">JSON request body</div>
+            <textarea id="enc-raw-json" style="min-height: 280px;"></textarea>
+        </div>
     </div>
 
-    <div class="card">
-        <div class="section-title">Misure time-series (byte 26+, slot da 4 byte)</div>
-        <div id="measures-block"></div>
-    </div>
+    <button class="primary" id="encode-btn">Encoda</button>
+    <div id="encode-status"></div>
 
-    <details>
-        <summary>Mostra JSON grezzo della risposta</summary>
-        <pre id="raw-json" class="card" style="font-size: 12px; overflow-x: auto;"></pre>
-    </details>
-</div>
+    <div id="encode-results" style="display: none;">
+        <div class="card">
+            <div class="section-title">Comandi ASCII individuali (incl. REBOOT auto-appended)</div>
+            <pre id="enc-individual" class="composed"></pre>
+        </div>
+        <div class="card">
+            <div class="section-title">Payload composto (ASCII finale sul wire)</div>
+            <pre id="enc-composed-ascii" class="composed"></pre>
+        </div>
+        <div class="card">
+            <div class="section-title">Payload composto (Hex byte)</div>
+            <pre id="enc-composed-hex" class="composed"></pre>
+        </div>
+        <div class="card">
+            <div class="section-title">Righe device_commands (persistenza preview)</div>
+            <div id="enc-persistence-block"></div>
+        </div>
+        <details>
+            <summary>Mostra JSON grezzo della risposta</summary>
+            <pre id="enc-raw-response" class="card" style="font-size: 12px; overflow-x: auto;"></pre>
+        </details>
+    </div>
+</section>
 
 <script>
-    const btn = document.getElementById('decode-btn');
-    const input = document.getElementById('hex-input');
-    const statusDiv = document.getElementById('status');
-    const results = document.getElementById('results');
+// ======================================================================
+//  TAB NAVIGATION
+// ======================================================================
+document.querySelectorAll('nav.top-nav button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        document.querySelectorAll('nav.top-nav button').forEach(b => b.classList.toggle('active', b === btn));
+        document.getElementById('view-decode').hidden = (view !== 'decode');
+        document.getElementById('view-encode').hidden = (view !== 'encode');
+    });
+});
 
-    btn.addEventListener('click', async () => {
-        const hex = input.value.trim();
-        if (!hex) {
-            statusDiv.innerHTML = '<div class="err">Inserire una stringa hex.</div>';
+document.querySelectorAll('.sub-tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.sub-tabs button').forEach(b => b.classList.toggle('active', b === btn));
+        document.getElementById('encode-form-mode').hidden = (tab !== 'form');
+        document.getElementById('encode-json-mode').hidden = (tab !== 'json');
+    });
+});
+
+// ======================================================================
+//  DECODE LOGIC (existing)
+// ======================================================================
+document.getElementById('decode-btn').addEventListener('click', async () => {
+    const hex = document.getElementById('hex-input').value.trim();
+    const statusDiv = document.getElementById('decode-status');
+    const results = document.getElementById('decode-results');
+    if (!hex) {
+        statusDiv.innerHTML = '<div class="err">Inserire una stringa hex.</div>';
+        results.style.display = 'none';
+        return;
+    }
+    statusDiv.textContent = 'Decodifica in corso...';
+    results.style.display = 'none';
+    try {
+        const resp = await fetch('/api/decode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hex })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            statusDiv.innerHTML = '<div class="err">Errore: ' + (data.error || resp.status) + '</div>';
+            return;
+        }
+        statusDiv.innerHTML = '<div class="ok">Decodifica completata.</div>';
+        renderDecodeResults(data);
+        results.style.display = 'block';
+    } catch (e) {
+        statusDiv.innerHTML = '<div class="err">Errore di rete: ' + e.message + '</div>';
+    }
+});
+
+function renderDecodeResults(data) {
+    const headerBlock = document.getElementById('header-block');
+    const headerRows = [
+        { field: 'Device ID (IMEI BCD raw)', hex: data.deviceIdSourceHex,           range: data.deviceIdByteRange,           value: data.deviceId,                     note: 'IMEI raw 16 cifre' },
+        { field: 'Message Type',             hex: data.messageTypeSourceHex,        range: data.messageTypeByteRange,        value: data.messageType,                  note: '#' + data.messageType + ' ' + messageTypeLabel(data.messageType) },
+        { field: 'Body Length (dichiarato)', hex: data.declaredBodyLengthSourceHex, range: data.declaredBodyLengthByteRange, value: data.declaredBodyLength + ' byte', note: 'byte 16 (+ bits[7:6] di B15 × 256, in pratica = 0)' },
+        { field: 'Total Bytes (ricevuti)',   hex: '—',                              range: '—',                              value: data.totalBytes + ' byte',         note: 'header + body + CRC' },
+        { field: 'Contact Reason',           hex: data.contactReasonHex,            range: data.contactReasonByteRange,      value: '0x' + data.contactReasonHex,      note: formatFlags(data.contactReasonFlags) },
+        { field: 'Alarm Status',             hex: data.alarmStatusHex,              range: data.alarmStatusByteRange,        value: '0x' + data.alarmStatusHex,        note: formatFlags(data.alarmStatusFlags) },
+    ];
+    headerBlock.innerHTML = renderHeaderTable(headerRows);
+
+    const alBlock = document.getElementById('alarms-block');
+    if (data.alarms && data.alarms.length > 0) {
+        let html = '<table><thead><tr><th>Hex</th><th>Byte</th><th>Timestamp</th><th>Codice</th><th>Descrizione</th></tr></thead><tbody>';
+        data.alarms.forEach(a => {
+            html += '<tr class="alarm-row">'
+                 + '<td class="hex-cell">' + (a.sourceHex || '—') + '</td>'
+                 + '<td class="byte-cell">' + (a.byteRange || '—') + '</td>'
+                 + '<td class="mono">' + a.timestamp + '</td>'
+                 + '<td class="mono">' + a.alarmCode + '</td>'
+                 + '<td>' + a.description + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        alBlock.innerHTML = html;
+    } else {
+        alBlock.innerHTML = '<em style="color: var(--muted);">Nessun allarme presente nel payload.</em>';
+    }
+
+    const headerDiag = (data.measures || []).filter(m =>
+        m.obisCode.startsWith('header.') || m.obisCode.startsWith('network.')
+        || m.obisCode === 'contact_reason_flags' || m.obisCode === 'alarm_status_flags');
+    const tsMeasures = (data.measures || []).filter(m => !headerDiag.includes(m));
+    renderMeasureTable('header-diag-block', headerDiag, 'Nessuna diagnostica header presente.');
+    renderMeasureTable('measures-block', tsMeasures, 'Nessuna misura time-series nel payload.');
+    document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
+}
+
+function renderHeaderTable(rows) {
+    let html = '<table><thead><tr><th>Hex</th><th>Byte</th><th>Campo</th><th>Valore</th><th>Note</th></tr></thead><tbody>';
+    rows.forEach(r => {
+        html += '<tr>'
+             + '<td class="hex-cell">' + (r.hex || '—') + '</td>'
+             + '<td class="byte-cell">' + (r.range || '—') + '</td>'
+             + '<td>' + r.field + '</td>'
+             + '<td class="mono">' + r.value + '</td>'
+             + '<td>' + (r.note || '') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+}
+
+function renderMeasureTable(elementId, measures, emptyMsg) {
+    const el = document.getElementById(elementId);
+    if (!measures || measures.length === 0) {
+        el.innerHTML = '<em style="color: var(--muted);">' + emptyMsg + '</em>';
+        return;
+    }
+    let html = '<table><thead><tr><th>Hex</th><th>Byte</th><th>Timestamp</th><th>OBIS Code</th><th>Valore</th><th>Unità / Label</th></tr></thead><tbody>';
+    measures.forEach(m => {
+        html += '<tr>'
+             + '<td class="hex-cell">' + (m.sourceHex || '—') + '</td>'
+             + '<td class="byte-cell">' + (m.byteRange || '—') + '</td>'
+             + '<td class="mono">' + m.timestamp + '</td>'
+             + '<td class="mono">' + m.obisCode + '</td>'
+             + '<td>' + m.value + '</td>'
+             + '<td>' + (m.unit || '') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+function messageTypeLabel(t) {
+    const labels = { 4: '(scheduled measure delivery)', 6: '(settings dump)', 8: '(alarm / manual wakeup)', 9: '(dynamic alarm offset)', 16: '(stats)', 17: '(GPS)' };
+    return labels[t] || '(unknown)';
+}
+
+function formatFlags(flags) {
+    if (!flags || flags.length === 0) return '';
+    return '[' + flags.join(' + ') + ']';
+}
+
+// ======================================================================
+//  ENCODE LOGIC
+// ======================================================================
+
+// Schema dei comandi: chiave = command type, valore = array di campi.
+// Ogni campo: { name, label, type: "number"|"text"|"checkbox"|"select", default, options? }
+const COMMAND_SCHEMAS = {
+    SET_INTERVAL: [
+        { name: "interval", label: "Logger speed (ore, multipli di 0.25, max 31)", type: "number", default: 4 },
+        { name: "samplingPeriod", label: "Sampling period", type: "select", default: 1, options: [{v:0, l:"1 min"}, {v:1, l:"15 min"}] }
+    ],
+    SET_LISTEN: [
+        { name: "listenMinutes", label: "Listen period (minuti, multipli di 5, max 155)", type: "number", default: 5 }
+    ],
+    SET_SCHEDULE: [
+        { name: "schedule", label: "Schedule hex 3 byte (default 7F2000)", type: "text", default: "7F2000" }
+    ],
+    SET_ALARM_THRESHOLD: [
+        { name: "alarmRegister", label: "Registro alarm", type: "select", default: "S4", options: [{v:"S4", l:"S4"}, {v:"S5", l:"S5"}, {v:"S6", l:"S6"}] },
+        { name: "threshold", label: "Soglia (0-1023)", type: "number", default: 150 },
+        { name: "hysteresis", label: "Isteresi (0-15)", type: "number", default: 10 },
+        { name: "enabled", label: "Abilitato", type: "checkbox", default: true },
+        { name: "polarity", label: "Polarità (true = alarm se sopra soglia)", type: "checkbox", default: true }
+    ],
+    SET_APN: [
+        { name: "apn", label: "APN", type: "text", default: "iot.1nce.net" },
+        { name: "username", label: "APN username", type: "text", default: "" },
+        { name: "apnPassword", label: "APN password", type: "text", default: "" }
+    ],
+    SET_SERVER: [
+        { name: "serverIp", label: "Server IP/URL (S15)", type: "text", default: "173.212.215.131" },
+        { name: "serverPort", label: "Server port (S16)", type: "text", default: "9002" }
+    ],
+    SET_CONTROL_CONFIG: [
+        { name: "networkMode", label: "Network Mode", type: "select", default: 0, options: [{v:0, l:"0 = LTE CatM1"}, {v:1, l:"1 = NB-IoT"}, {v:2, l:"2 = 2G"}, {v:3, l:"3 = Auto"}] },
+        { name: "sendMsg16Monthly", label: "Send Msg #16 monthly", type: "checkbox", default: false },
+        { name: "dryContactP1", label: "Dry Contact P1", type: "checkbox", default: false },
+        { name: "crcEnabled", label: "CRC checking incoming", type: "checkbox", default: false },
+        { name: "deliveryReport", label: "Delivery Report", type: "checkbox", default: false },
+        { name: "verboseTsp", label: "Verbose TSP", type: "checkbox", default: false }
+    ],
+    SET_DYNAMIC_LIMIT_1: [
+        { name: "polarity", label: "Polarity (true = rising units)", type: "checkbox", default: false },
+        { name: "enabled", label: "Abilitato", type: "checkbox", default: false },
+        { name: "rate", label: "Rate (0-63)", type: "number", default: 0 }
+    ],
+    SET_DYNAMIC_LIMIT_2: [
+        { name: "polarity", label: "Polarity", type: "checkbox", default: false },
+        { name: "enabled", label: "Abilitato", type: "checkbox", default: false },
+        { name: "rate", label: "Rate (0-63)", type: "number", default: 0 }
+    ],
+    SET_PASSWORD: [
+        { name: "newPassword", label: "Nuova password (max 6 char)", type: "text", default: "TEK822" }
+    ],
+    SET_BATTERY_CAPACITY: [
+        { name: "capacityMah", label: "Capacità in mAh", type: "number", default: 7200 }
+    ],
+    SET_F_STOP: [
+        { name: "voltage", label: "Max sensor V (0-5)", type: "number", default: 5 }
+    ],
+    SET_CONTROL3_CONFIG: [
+        { name: "apnAuthNone", label: "APN Auth None (default PAP/CHAP)", type: "checkbox", default: false },
+        { name: "inhibitBeep", label: "Inhibit background beeping", type: "checkbox", default: false },
+        { name: "fallbackGprs", label: "Fallback GPRS from LTE", type: "checkbox", default: false }
+    ],
+    SET_E_STOP: [
+        { name: "voltage", label: "Min sensor V (0-5)", type: "number", default: 1 }
+    ],
+    SET_MCC_MNC: [
+        { name: "mccMnc", label: "MCC_MNC operator code", type: "text", default: "" }
+    ],
+    SET_LTE_BAND: [
+        { name: "bandCode", label: "LTE band code (hex value)", type: "select", default: 1, options: [
+            {v:1, l:"B1 (1)"}, {v:2, l:"B2 (2)"}, {v:4, l:"B3 (4)"}, {v:8, l:"B4 (8)"},
+            {v:0x10, l:"B5 (10)"}, {v:0x80, l:"B8 (80)"}, {v:0x800, l:"B12 (800)"}, {v:0x1000, l:"B13 (1000)"},
+            {v:0x20000, l:"B18 (20000)"}, {v:0x40000, l:"B19 (40000)"}, {v:0x80000, l:"B20 (80000)"},
+            {v:0x2000000, l:"B26 (2000000)"}, {v:0x8000000, l:"B28 (8000000)"}, {v:0xEE6B2800, l:"B39 (EE6B2800)"}
+        ] }
+    ],
+    SET_RETRY_CONFIG: [
+        { name: "tryTickets", label: "Try tickets (1-8)", type: "number", default: 4 },
+        { name: "periodSec", label: "Period (sec, multipli di 10)", type: "number", default: 30 }
+    ],
+    SET_SCHEDULE_DELAY: [
+        { name: "delayMinutes", label: "Delay (min, max 14)", type: "number", default: 0 }
+    ],
+    SET_CONTROL2_CONFIG: [
+        { name: "temperatureAlarm", label: "Temperature Alarm (S0)", type: "checkbox", default: false },
+        { name: "smsDisableFallback", label: "SMS Disable fallback (GPRS only)", type: "checkbox", default: false },
+        { name: "smsAlarmOnly", label: "SMS Alarm only fallback", type: "checkbox", default: false },
+        { name: "noChangeAlarm", label: "No Change Alarm (DynLim2)", type: "checkbox", default: false },
+        { name: "adcInverted", label: "ADC Inverted output", type: "checkbox", default: false },
+        { name: "adcHighRes", label: "ADC High Res 0-1000 (else 0-100)", type: "checkbox", default: false },
+        { name: "adcRaw", label: "ADC Raw 10-bit 0-1023 (override bit 5/6)", type: "checkbox", default: false }
+    ],
+    SET_CONTROL4_CONFIG: [
+        { name: "disableLongRetry", label: "Disable long timeframe retry", type: "checkbox", default: false },
+        { name: "dynLim1OffsetTimer", label: "DynLim1 Offset Timer", type: "select", default: 0, options: [
+            {v:0, l:"0 = disabled"}, {v:1, l:"1 = 15 min"}, {v:2, l:"2 = 30 min"}, {v:3, l:"3 = 60 min"}
+        ] }
+    ],
+    // R-commands (no parameters typically)
+    REBOOT: [],
+    REQUEST_STATUS: [],
+    REQUEST_SETTINGS: [
+        { name: "startFrom", label: "Start from register", type: "select", default: "S0", options: [{v:"S0", l:"S0"}, {v:"S12", l:"S12"}, {v:"S19", l:"S19"}] }
+    ],
+    SHUTDOWN: [],
+    SET_RTC: [],
+    DEACTIVATE: [],
+    CLOSE_TCP: [],
+    REQUEST_GPS: [{ name: "timeout", label: "Timeout (sec)", type: "number", default: 60 }],
+    RESET_RTC: [],
+    REQUEST_BUFFER_DATA: [],
+    REQUEST_DIAGNOSTIC_DATA: []
+};
+
+const cmdList = document.getElementById('cmd-list');
+let cmdCounter = 0;
+
+document.getElementById('add-cmd-btn').addEventListener('click', () => addCommandCard());
+
+function addCommandCard() {
+    cmdCounter++;
+    const card = document.createElement('div');
+    card.className = 'cmd-card';
+    card.dataset.cmdId = cmdCounter;
+
+    const header = document.createElement('div');
+    header.className = 'cmd-card-header';
+    header.innerHTML =
+        '<span class="cmd-num">' + cmdCounter + '</span>' +
+        '<select class="cmd-type"></select>' +
+        '<button class="danger">Rimuovi</button>';
+    card.appendChild(header);
+
+    const typeSelect = header.querySelector('.cmd-type');
+    Object.keys(COMMAND_SCHEMAS).sort().forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t; opt.textContent = t;
+        typeSelect.appendChild(opt);
+    });
+
+    const paramsDiv = document.createElement('div');
+    paramsDiv.className = 'cmd-params';
+    card.appendChild(paramsDiv);
+
+    typeSelect.addEventListener('change', () => renderParamsForm(paramsDiv, typeSelect.value));
+    header.querySelector('button.danger').addEventListener('click', () => card.remove());
+
+    renderParamsForm(paramsDiv, typeSelect.value);
+    cmdList.appendChild(card);
+}
+
+function renderParamsForm(container, cmdType) {
+    container.innerHTML = '';
+    const schema = COMMAND_SCHEMAS[cmdType] || [];
+    if (schema.length === 0) {
+        container.innerHTML = '<em style="color: var(--muted); font-size: 12px;">(nessun parametro)</em>';
+        return;
+    }
+    schema.forEach(field => {
+        const row = document.createElement('div'); row.className = 'form-row';
+        const label = document.createElement('label'); label.textContent = field.label;
+        row.appendChild(label);
+
+        let input;
+        if (field.type === 'checkbox') {
+            input = document.createElement('input'); input.type = 'checkbox';
+            input.checked = !!field.default;
+            input.style.width = 'auto'; input.style.marginRight = '8px';
+            label.prepend(input);
+            // remove the second occurrence of the label text by inserting label first
+        } else if (field.type === 'select') {
+            input = document.createElement('select');
+            field.options.forEach(o => {
+                const opt = document.createElement('option');
+                opt.value = o.v; opt.textContent = o.l;
+                if (o.v === field.default) opt.selected = true;
+                input.appendChild(opt);
+            });
+        } else {
+            input = document.createElement('input');
+            input.type = field.type;
+            input.value = field.default !== undefined ? field.default : '';
+        }
+        input.dataset.paramName = field.name;
+        input.dataset.paramType = field.type;
+        if (field.type !== 'checkbox') row.appendChild(input);
+        container.appendChild(row);
+    });
+}
+
+function collectFormData() {
+    const cards = cmdList.querySelectorAll('.cmd-card');
+    const commands = [];
+    cards.forEach(card => {
+        const type = card.querySelector('.cmd-type').value;
+        const params = {};
+        card.querySelectorAll('[data-param-name]').forEach(input => {
+            const name = input.dataset.paramName;
+            const ptype = input.dataset.paramType;
+            if (ptype === 'checkbox') {
+                params[name] = input.checked;
+            } else if (ptype === 'number') {
+                params[name] = parseFloat(input.value);
+            } else if (ptype === 'select') {
+                // try parse as number, else string
+                const v = input.value;
+                params[name] = isNaN(Number(v)) ? v : Number(v);
+            } else {
+                params[name] = input.value;
+            }
+        });
+        commands.push({ type, parameters: params });
+    });
+    return {
+        deviceId:   document.getElementById('enc-device-id').value.trim(),
+        deviceType: document.getElementById('enc-device-type').value.trim(),
+        password:   document.getElementById('enc-password').value.trim() || 'TEK822',
+        commands
+    };
+}
+
+document.getElementById('encode-btn').addEventListener('click', async () => {
+    const statusDiv = document.getElementById('encode-status');
+    const results = document.getElementById('encode-results');
+
+    let body;
+    const isFormMode = !document.getElementById('encode-form-mode').hidden;
+    if (isFormMode) {
+        body = collectFormData();
+        if (body.commands.length === 0) {
+            statusDiv.innerHTML = '<div class="err">Aggiungere almeno un comando.</div>';
             results.style.display = 'none';
             return;
         }
-        btn.disabled = true;
-        statusDiv.textContent = 'Decodifica in corso...';
-        results.style.display = 'none';
-
+    } else {
         try {
-            const resp = await fetch('/api/decode', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hex })
-            });
-            const data = await resp.json();
-
-            if (!resp.ok) {
-                statusDiv.innerHTML = '<div class="err">Errore: ' + (data.error || resp.status) + '</div>';
-                return;
-            }
-
-            statusDiv.innerHTML = '<div class="ok">Decodifica completata.</div>';
-            renderResults(data);
-            results.style.display = 'block';
+            body = JSON.parse(document.getElementById('enc-raw-json').value);
         } catch (e) {
-            statusDiv.innerHTML = '<div class="err">Errore di rete: ' + e.message + '</div>';
-        } finally {
-            btn.disabled = false;
-        }
-    });
-
-    function renderResults(data) {
-        // Header table
-        const headerBlock = document.getElementById('header-block');
-        const headerRows = [
-            { field: 'Device ID (IMEI BCD raw)', hex: data.deviceIdSourceHex,           range: data.deviceIdByteRange,           value: data.deviceId,                   note: 'IMEI raw 16 cifre' },
-            { field: 'Message Type',             hex: data.messageTypeSourceHex,        range: data.messageTypeByteRange,        value: data.messageType,                note: '#' + data.messageType + ' ' + messageTypeLabel(data.messageType) },
-            { field: 'Body Length (dichiarato)', hex: data.declaredBodyLengthSourceHex, range: data.declaredBodyLengthByteRange, value: data.declaredBodyLength + ' byte', note: 'byte 16 (+ bits[7:6] di B15 × 256, in pratica = 0)' },
-            { field: 'Total Bytes (ricevuti)',   hex: '—',                              range: '—',                              value: data.totalBytes + ' byte',       note: 'header + body + CRC' },
-            { field: 'Contact Reason',           hex: data.contactReasonHex,            range: data.contactReasonByteRange,      value: '0x' + data.contactReasonHex,    note: formatFlags(data.contactReasonFlags) },
-            { field: 'Alarm Status',             hex: data.alarmStatusHex,              range: data.alarmStatusByteRange,        value: '0x' + data.alarmStatusHex,      note: formatFlags(data.alarmStatusFlags) },
-        ];
-        headerBlock.innerHTML = renderHeaderTable(headerRows);
-
-        // Allarmi
-        const alBlock = document.getElementById('alarms-block');
-        if (data.alarms && data.alarms.length > 0) {
-            let html = '<table><thead><tr><th>Timestamp</th><th>Hex</th><th>Byte</th><th>Codice</th><th>Descrizione</th></tr></thead><tbody>';
-            data.alarms.forEach(a => {
-                html += '<tr class="alarm-row">'
-                     + '<td class="mono">' + a.timestamp + '</td>'
-                     + '<td class="hex-cell">' + (a.sourceHex || '—') + '</td>'
-                     + '<td class="byte-cell">' + (a.byteRange || '—') + '</td>'
-                     + '<td class="mono">' + a.alarmCode + '</td>'
-                     + '<td>' + a.description + '</td></tr>';
-            });
-            html += '</tbody></table>';
-            alBlock.innerHTML = html;
-        } else {
-            alBlock.innerHTML = '<em style="color: var(--muted);">Nessun allarme presente nel payload.</em>';
-        }
-
-        // Le measure con prefisso "header." o "network." o le bitmask raw vanno nella sezione diagnostica.
-        const headerDiag = (data.measures || []).filter(m =>
-            m.obisCode.startsWith('header.')
-            || m.obisCode.startsWith('network.')
-            || m.obisCode === 'contact_reason_flags'
-            || m.obisCode === 'alarm_status_flags');
-        const tsMeasures = (data.measures || []).filter(m => !headerDiag.includes(m));
-
-        renderMeasureTable('header-diag-block', headerDiag, 'Nessuna diagnostica header presente.');
-        renderMeasureTable('measures-block', tsMeasures, 'Nessuna misura time-series nel payload.');
-
-        // JSON raw
-        document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
-    }
-
-    function renderHeaderTable(rows) {
-        let html = '<table><thead><tr><th>Campo</th><th>Hex</th><th>Byte</th><th>Valore</th><th>Note</th></tr></thead><tbody>';
-        rows.forEach(r => {
-            html += '<tr>'
-                 + '<td>' + r.field + '</td>'
-                 + '<td class="hex-cell">' + (r.hex || '—') + '</td>'
-                 + '<td class="byte-cell">' + (r.range || '—') + '</td>'
-                 + '<td class="mono">' + r.value + '</td>'
-                 + '<td>' + (r.note || '') + '</td></tr>';
-        });
-        html += '</tbody></table>';
-        return html;
-    }
-
-    function renderMeasureTable(elementId, measures, emptyMsg) {
-        const el = document.getElementById(elementId);
-        if (!measures || measures.length === 0) {
-            el.innerHTML = '<em style="color: var(--muted);">' + emptyMsg + '</em>';
+            statusDiv.innerHTML = '<div class="err">JSON non valido: ' + e.message + '</div>';
+            results.style.display = 'none';
             return;
         }
-        let html = '<table><thead><tr><th>Timestamp</th><th>OBIS Code</th><th>Hex</th><th>Byte</th><th>Valore</th><th>Unità / Label</th></tr></thead><tbody>';
-        measures.forEach(m => {
+    }
+
+    statusDiv.textContent = 'Encoding in corso...';
+    results.style.display = 'none';
+    try {
+        const resp = await fetch('/api/encode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            statusDiv.innerHTML = '<div class="err">Errore: ' + (data.error || resp.status) + '</div>';
+            return;
+        }
+        statusDiv.innerHTML = '<div class="ok">Encoding completato.</div>';
+        renderEncodeResults(data);
+        results.style.display = 'block';
+    } catch (e) {
+        statusDiv.innerHTML = '<div class="err">Errore di rete: ' + e.message + '</div>';
+    }
+});
+
+function renderEncodeResults(data) {
+    document.getElementById('enc-individual').textContent = data.individualCommands.join('\n');
+
+    // Composed ASCII: mostra CRLF visibile come marker
+    const composed = data.composedAscii.replace(/\r\n/g, '<span class="crlf-marker">\\r\\n</span>');
+    document.getElementById('enc-composed-ascii').innerHTML = composed;
+
+    // Composed hex: spaziato a coppie per leggibilità
+    const hex = data.composedHex.replace(/(..)/g, '$1 ').trim();
+    document.getElementById('enc-composed-hex').textContent =
+        hex + '\n\n(' + data.totalBytes + ' byte totali)';
+
+    // Persistence rows
+    const persBlock = document.getElementById('enc-persistence-block');
+    if (data.persistenceRows && data.persistenceRows.length > 0) {
+        let html = '<table><thead><tr><th>device_id</th><th>device_type</th><th>command_type</th><th>command_params (JSON)</th><th>status</th></tr></thead><tbody>';
+        data.persistenceRows.forEach(r => {
             html += '<tr>'
-                 + '<td class="mono">' + m.timestamp + '</td>'
-                 + '<td class="mono">' + m.obisCode + '</td>'
-                 + '<td class="hex-cell">' + (m.sourceHex || '—') + '</td>'
-                 + '<td class="byte-cell">' + (m.byteRange || '—') + '</td>'
-                 + '<td>' + m.value + '</td>'
-                 + '<td>' + (m.unit || '') + '</td></tr>';
+                 + '<td class="mono">' + (r.deviceId || '') + '</td>'
+                 + '<td class="mono">' + (r.deviceType || '') + '</td>'
+                 + '<td class="mono">' + r.commandType + '</td>'
+                 + '<td class="mono" style="max-width:400px;word-break:break-all;">' + r.commandParams + '</td>'
+                 + '<td class="mono">' + r.status + '</td></tr>';
         });
         html += '</tbody></table>';
-        el.innerHTML = html;
+        persBlock.innerHTML = html;
+    } else {
+        persBlock.innerHTML = '<em style="color: var(--muted);">(nessuna riga)</em>';
     }
 
-    function messageTypeLabel(t) {
-        const labels = {
-            4: '(scheduled measure delivery)',
-            6: '(settings dump)',
-            8: '(alarm / manual wakeup)',
-            9: '(dynamic alarm offset)',
-            16: '(stats)',
-            17: '(GPS)'
-        };
-        return labels[t] || '(unknown)';
-    }
+    document.getElementById('enc-raw-response').textContent = JSON.stringify(data, null, 2);
 
-    // I flag dei byte 3 e 4 sono decodificati server-side dal modulo decoder
-    // (FlagDecoder) ed esposti come array nella risposta REST. Qui ci limitiamo
-    // a renderizzarli.
-    function formatFlags(flags) {
-        if (!flags || flags.length === 0) return '';
-        return '[' + flags.join(' + ') + ']';
+    // Sync the raw JSON tab with what was just sent (utile per modifiche successive)
+    const lastReq = collectFormData();
+    if (!document.getElementById('encode-form-mode').hidden) {
+        document.getElementById('enc-raw-json').value = JSON.stringify(lastReq, null, 2);
     }
+}
+
+// Inizializza con un comando vuoto
+addCommandCard();
 </script>
 
 </body>

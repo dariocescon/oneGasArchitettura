@@ -131,7 +131,7 @@ public class Tek822Worker implements Worker {
      *
      * <p>Package-private per consentire ai test di verificarlo direttamente.
      */
-    static byte[] composeAsciiPayload(CommandsPacket commands) {
+    public static byte[] composeAsciiPayload(CommandsPacket commands) {
         String[] ascii = commands.commands();
         if (ascii == null || ascii.length == 0) return new byte[0];
 

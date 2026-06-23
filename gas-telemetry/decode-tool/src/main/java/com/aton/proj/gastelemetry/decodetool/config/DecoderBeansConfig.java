@@ -22,4 +22,13 @@ public class DecoderBeansConfig {
     public Tek822Decoder tek822Decoder() {
         return new Tek822Decoder();
     }
+
+    /**
+     * Stessa logica per il {@link com.aton.proj.gastelemetry.worker.impl.Tek822Encoder}:
+     * classe pura, istanziabile con {@code new}, niente DI nel costruttore.
+     */
+    @Bean
+    public com.aton.proj.gastelemetry.worker.impl.Tek822Encoder tek822Encoder() {
+        return new com.aton.proj.gastelemetry.worker.impl.Tek822Encoder();
+    }
 }
