@@ -157,7 +157,7 @@
         const headerRows = [
             { field: 'Device ID (IMEI BCD raw)', hex: data.deviceIdSourceHex,           range: data.deviceIdByteRange,           value: data.deviceId,                   note: 'IMEI raw 16 cifre' },
             { field: 'Message Type',             hex: data.messageTypeSourceHex,        range: data.messageTypeByteRange,        value: data.messageType,                note: '#' + data.messageType + ' ' + messageTypeLabel(data.messageType) },
-            { field: 'Body Length (dichiarato)', hex: data.declaredBodyLengthSourceHex, range: data.declaredBodyLengthByteRange, value: data.declaredBodyLength + ' byte', note: 'byte 16 (+ bits[5:4] di B15 × 256, in pratica = 0)' },
+            { field: 'Body Length (dichiarato)', hex: data.declaredBodyLengthSourceHex, range: data.declaredBodyLengthByteRange, value: data.declaredBodyLength + ' byte', note: 'byte 16 (+ bits[7:6] di B15 × 256, in pratica = 0)' },
             { field: 'Total Bytes (ricevuti)',   hex: '—',                              range: '—',                              value: data.totalBytes + ' byte',       note: 'header + body + CRC' },
             { field: 'Contact Reason',           hex: data.contactReasonHex,            range: data.contactReasonByteRange,      value: '0x' + data.contactReasonHex,    note: formatFlags(data.contactReasonFlags) },
             { field: 'Alarm Status',             hex: data.alarmStatusHex,              range: data.alarmStatusByteRange,        value: '0x' + data.alarmStatusHex,      note: formatFlags(data.alarmStatusFlags) },

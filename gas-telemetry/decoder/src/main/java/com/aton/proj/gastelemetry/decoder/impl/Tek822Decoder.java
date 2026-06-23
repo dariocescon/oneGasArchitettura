@@ -120,18 +120,25 @@ public class Tek822Decoder implements Decoder {
      * Calcola la lunghezza del body dichiarata dal device a partire dai byte
      * 15 e 16 dell'header (PDF §2.2.1).
      *
-     * <p>Formula: {@code ((byte15 >> 4) & 0x03) × 256 + byte16}.
+     * <p>Formula: {@code ((byte15 >> 6) & 0x03) × 256 + byte16}.
      *
-     * <p>I bit 5 e 4 del byte 15 sono il contributo "alto" (× 256), il byte 16
-     * è il contributo "basso". Per i TEK822 reali il valore sta sempre in un
-     * solo byte (body < 256), quindi i bit alti sono di fatto sempre 0.
+     * <p>I bit 7 e 6 del byte 15 sono il contributo "alto" (× 256), il byte 16
+     * è il contributo "basso". I bit 5:0 di byte 15 sono dedicati al Message
+     * Type (vedi {@code & 0x3F} in {@link #doDecode}), quindi NON possono
+     * essere usati per la lunghezza — il PDF v1.21 cita erroneamente "Bit5&Bit4"
+     * ma la formula coerente con i message type 16/17 (che usano bit 4) usa
+     * bits[7:6].
+     *
+     * <p>Per i TEK822 reali il body sta sempre in un solo byte (max documentato
+     * 235), quindi i bit alti sono di fatto sempre 0 e il valore coincide con
+     * il solo byte 16.
      *
      * @param data payload TEK822 di almeno {@value #MIN_HEADER_LEN} byte
      * @return lunghezza body, range 0-1023
      * @throws ArrayIndexOutOfBoundsException se {@code data} è più corto dell'header
      */
     public static int computeDeclaredBodyLength(byte[] data) {
-        return ((data[MSG_TYPE_BYTE] >> 4) & 0x03) * 256
+        return ((data[MSG_TYPE_BYTE] >> 6) & 0x03) * 256
                 + (data[MSG_TYPE_BYTE + 1] & 0xFF);
     }
 
@@ -154,18 +161,44 @@ public class Tek822Decoder implements Decoder {
         int messageType = data[MSG_TYPE_BYTE] & 0x3F;
         log.debug("Decodifico msg type {} per device {}", messageType, deviceId);
 
-        DecodedPacket packet = switch (messageType) {
-            case 4, 8, 9 -> decodeMeasures(ctx, deviceId, data);
-            case 6       -> decodeSettings(data);
-            case 16      -> decodeStatistics(data);
-            case 17      -> decodeGps(data);
+        // Timestamp base: per Msg #4/#8/#9 ricostruito dal RTC del device (byte 19+25),
+        // per gli altri tipi è il server time (l'header non porta RTC per #6/#16/#17).
+        Instant baseTimestamp = isMeasureMessage(messageType)
+                ? reconstructTimestamp(data, Instant.now())
+                : Instant.now();
+
+        // Diagnostica COMUNE (Fix A): l'header (byte 0-6) e i flag (byte 3, 4)
+        // esistono per QUALSIASI tipo di messaggio — l'header è condiviso. Li
+        // emettiamo qui per non duplicare le chiamate nei rami switch.
+        List<Measure> measures = new ArrayList<>();
+        List<Alarm>   alarms   = new ArrayList<>();
+        measures.addAll(decodeHeaderDiagnostics(data, baseTimestamp));
+        measures.add(new Measure(baseTimestamp, "contact_reason_flags",
+                data[CONTACT_REASON_OFFSET] & 0xFF, ""));
+        measures.add(new Measure(baseTimestamp, "alarm_status_flags",
+                data[ALARM_STATUS_OFFSET] & 0xFF, ""));
+        alarms.addAll(decodeDeviceAlarms(data, baseTimestamp));
+
+        // Dispatch al decoder body-specifico
+        DecodedPacket body = switch (messageType) {
+            case 4, 8, 9 -> decodeMeasureBody(ctx, deviceId, data, baseTimestamp);
+            case 6       -> decodeSettings(data, baseTimestamp);
+            case 16      -> decodeStatistics(data, baseTimestamp);
+            case 17      -> decodeGps(data, baseTimestamp);
             default      -> {
                 log.warn("Message type {} sconosciuto per device {}", messageType, deviceId);
                 yield new DecodedPacket(List.of(), List.of());
             }
         };
 
-        ctx.publishDecodedData(deviceId, packet);
+        measures.addAll(body.measures());
+        alarms.addAll(body.alarms());
+
+        ctx.publishDecodedData(deviceId, new DecodedPacket(measures, alarms));
+    }
+
+    private static boolean isMeasureMessage(int messageType) {
+        return messageType == 4 || messageType == 8 || messageType == 9;
     }
 
     /**
@@ -189,23 +222,16 @@ public class Tek822Decoder implements Decoder {
     //  Message type 4/8/9 — misure periodiche
     // ================================================================
 
-    private DecodedPacket decodeMeasures(DecoderContext ctx, String deviceId, byte[] data) {
+    private DecodedPacket decodeMeasureBody(DecoderContext ctx, String deviceId, byte[] data, Instant baseTimestamp) {
         if (data.length < PAYLOAD_OFFSET) {
             log.warn("Payload troppo corto per misure: {} byte", data.length);
             return new DecodedPacket(List.of(), List.of());
         }
 
-        Instant serverTime     = Instant.now();
-        Instant baseTimestamp  = reconstructTimestamp(data, serverTime);
-        long loggerSpeedSec    = resolveLoggerSpeed(data);
+        long loggerSpeedSec = resolveLoggerSpeed(data);
 
         List<Measure> measures = new ArrayList<>();
         List<Alarm>   alarms   = new ArrayList<>();
-
-        // Diagnostica header (byte 0-6): product type, HW/FW rev, CSQ, batteria, flag.
-        // Mirror dei campi che lo sheet "822" dell'XLSM v1.21 mostra in colonna
-        // "Description" (righe R0013-R0027).
-        measures.addAll(decodeHeaderDiagnostics(data, baseTimestamp));
 
         // Diagnostica specifica Msg #4/#8/#9 (byte 17-21): message count, try
         // tickets, energy used. XLSM "822" righe R0056-R0060.
@@ -213,15 +239,6 @@ public class Tek822Decoder implements Decoder {
 
         // Diagnostica di rete (byte 22, 24) — riferita al timestamp della misura più recente
         measures.addAll(decodeNetworkDiagnostics(data, baseTimestamp));
-
-        // Stato/allarmi auto-segnalati dal device (byte 3 e 4): vedi fix A1.
-        // Sono indipendenti dalla nostra config: questi flag li ha settati
-        // il firmware confrontando le misure con S4/S5/S6/S7/S8 a bordo.
-        measures.add(new Measure(baseTimestamp, "contact_reason_flags",
-                data[CONTACT_REASON_OFFSET] & 0xFF, ""));
-        measures.add(new Measure(baseTimestamp, "alarm_status_flags",
-                data[ALARM_STATUS_OFFSET] & 0xFF, ""));
-        alarms.addAll(decodeDeviceAlarms(data, baseTimestamp));
 
         for (int i = 0; i < MAX_MEASURES; i++) {
             int j = PAYLOAD_OFFSET + i * BYTES_PER_MEASURE;
@@ -531,10 +548,9 @@ public class Tek822Decoder implements Decoder {
     //  Message type 6 — settings (ASCII: "S0=80,S1=05,…")
     // ================================================================
 
-    private DecodedPacket decodeSettings(byte[] data) {
+    private DecodedPacket decodeSettings(byte[] data, Instant now) {
         String ascii = extractAsciiPayload(data);
         List<Measure> measures = new ArrayList<>();
-        Instant now = Instant.now();
 
         for (String setting : ascii.split(",")) {
             if (!setting.contains("=")) continue;
@@ -573,23 +589,30 @@ public class Tek822Decoder implements Decoder {
     //          totalSendTime,maxSendTime,minSendTime,rssiTotal,rssiValidCount,rssiFailCount
     // ================================================================
 
-    private DecodedPacket decodeStatistics(byte[] data) {
+    private DecodedPacket decodeStatistics(byte[] data, Instant now) {
         String ascii  = extractAsciiPayload(data);
         String[] flds = ascii.split(",");
 
         List<Measure> measures = new ArrayList<>();
-        Instant now = Instant.now();
 
         if (flds.length >= 12) {
-            safeAdd(measures, now, "stats.energy_used_mah",   flds[1],  "mAh");
-            safeAdd(measures, now, "stats.min_temperature_c", flds[2],  "°C");
-            safeAdd(measures, now, "stats.max_temperature_c", flds[3],  "°C");
-            safeAdd(measures, now, "stats.message_count",     flds[4],  "");
-            safeAdd(measures, now, "stats.delivery_fail",     flds[5],  "");
-            safeAdd(measures, now, "stats.rssi_valid_count",  flds[10], "");
-            safeAdd(measures, now, "stats.rssi_fail_count",   flds[11], "");
-            // flds[0] = ICCID (stringa, non inserita come Measure)
-            log.debug("Msg type 16: ICCID={}, parsed {} stat(s)", flds[0].trim(), measures.size());
+            // ICCID: 20 cifre, non rappresentabili in double senza perdita di
+            // precisione → la stringa raw viene preservata in unit (value=0).
+            // Stesso pattern usato per i setting ASCII (S12 APN, S15 IP).
+            measures.add(new Measure(now, "stats.iccid", 0.0, flds[0].trim()));
+
+            safeAdd(measures, now, "stats.energy_used_ma_minutes", flds[1],  "mA·min");
+            safeAdd(measures, now, "stats.min_temperature_c",      flds[2],  "°C");
+            safeAdd(measures, now, "stats.max_temperature_c",      flds[3],  "°C");
+            safeAdd(measures, now, "stats.message_count",          flds[4],  "");
+            safeAdd(measures, now, "stats.delivery_fail",          flds[5],  "");
+            safeAdd(measures, now, "stats.total_send_time_s",      flds[6],  "s");
+            safeAdd(measures, now, "stats.max_send_time_s",        flds[7],  "s");
+            safeAdd(measures, now, "stats.min_send_time_s",        flds[8],  "s");
+            safeAdd(measures, now, "stats.rssi_total",             flds[9],  "");
+            safeAdd(measures, now, "stats.rssi_valid_count",       flds[10], "");
+            safeAdd(measures, now, "stats.rssi_fail_count",        flds[11], "");
+            log.debug("Msg type 16: parsed {} stat(s)", measures.size());
         } else {
             log.warn("Msg type 16: campo attesi ≥12, trovati {}", flds.length);
         }
@@ -603,19 +626,30 @@ public class Tek822Decoder implements Decoder {
     //          heading,speedKmh,speedKnots,date,satellites
     // ================================================================
 
-    private DecodedPacket decodeGps(byte[] data) {
+    private DecodedPacket decodeGps(byte[] data, Instant now) {
         String ascii  = extractAsciiPayload(data);
         String[] flds = ascii.split(",");
 
         List<Measure> measures = new ArrayList<>();
-        Instant now = Instant.now();
 
         if (flds.length >= 12) {
+            // Campi numerici: parse tramite safeAdd
             safeAdd(measures, now, "gps.time_to_fix_s", flds[0],  "s");
+            safeAdd(measures, now, "gps.hdop",          flds[4],  "");
             safeAdd(measures, now, "gps.altitude_m",    flds[5],  "m");
+            safeAdd(measures, now, "gps.fix_mode",      flds[6],  "");
+            safeAdd(measures, now, "gps.heading_deg",   flds[7],  "°");
             safeAdd(measures, now, "gps.speed_kmh",     flds[8],  "km/h");
+            safeAdd(measures, now, "gps.speed_knots",   flds[9],  "knots");
             safeAdd(measures, now, "gps.satellites",    flds[11], "");
-            // latRaw/lonRaw sono stringhe NMEA (es. "5255.9950N") — non convertite per ora
+
+            // Campi stringa preservati in unit (value=0): UTC, LAT NMEA, LON NMEA,
+            // Date. Stesso pattern usato per ICCID in Msg #16 e setting ASCII in Msg #6.
+            measures.add(new Measure(now, "gps.utc",       0.0, flds[1].trim()));
+            measures.add(new Measure(now, "gps.latitude",  0.0, flds[2].trim()));
+            measures.add(new Measure(now, "gps.longitude", 0.0, flds[3].trim()));
+            measures.add(new Measure(now, "gps.date",      0.0, flds[10].trim()));
+
             log.debug("Msg type 17: lat={}, lon={}, alt={}m, sats={}",
                     flds[2].trim(), flds[3].trim(), flds[5].trim(), flds[11].trim());
         } else {

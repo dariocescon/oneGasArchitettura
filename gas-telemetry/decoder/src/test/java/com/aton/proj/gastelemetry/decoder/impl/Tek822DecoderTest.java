@@ -312,13 +312,25 @@ class Tek822DecoderTest {
     }
 
     @Test
-    @DisplayName("computeDeclaredBodyLength — bits[5:4] di byte 15 contribuiscono × 256")
+    @DisplayName("computeDeclaredBodyLength — bits[7:6] di byte 15 contribuiscono × 256 (NON bits[5:4])")
     void declaredBodyLength_highBitsContribute() {
         byte[] data = new byte[17];
-        // 0b00110100 → bits[5:4] = 0b11 = 3 → contributo = 3 × 256 = 768
-        data[15] = 0x34;
+        // 0xC4 = 0b11000100 → bits[7:6] = 0b11 = 3 → contributo = 3 × 256 = 768
+        // bits[5:0] = 000100 = 4 (msgType valido)
+        data[15] = (byte) 0xC4;
         data[16] = 0x10; // 16
         assertThat(Tek822Decoder.computeDeclaredBodyLength(data)).isEqualTo(768 + 16);
+    }
+
+    @Test
+    @DisplayName("computeDeclaredBodyLength — Msg Type 16 (byte 15=0x10, byte 16=0x46) → 70, NON 326")
+    void declaredBodyLength_msgType16_noShiftConflict() {
+        byte[] data = new byte[17];
+        // 0x10 = 0b00010000 → bits[7:6] = 0 (contributo 0), bits[5:0] = msgType 16
+        data[15] = 0x10;
+        data[16] = 0x46; // 70 byte body
+        // Regression: il vecchio codice usava >> 4 e dava (1 × 256) + 70 = 326 ERRATO
+        assertThat(Tek822Decoder.computeDeclaredBodyLength(data)).isEqualTo(70);
     }
 
     @Test
@@ -502,6 +514,110 @@ class Tek822DecoderTest {
         assertThat(findMeasure(pkt, "setting.S2").value()).isEqualTo(8331264.0);
         assertThat(findMeasure(pkt, "setting.S22").value()).isEqualTo(6170.0);
         assertThat(findMeasure(pkt, "setting.S26").value()).isEqualTo(128.0);
+    }
+
+    /**
+     * Payload Msg #16 (statistics) dal foglio XLSM "822". Verifica:
+     *  - declaredBodyLength corretto (bug pre-fix: tornava 326 invece di 70)
+     *  - tutti e 12 i campi stats emessi come Measure (prima ne mancavano 5)
+     *  - ICCID preservato come stringa (in unit, value=0)
+     */
+    @Test
+    @DisplayName("Integration — payload XLSM Msg#16 reale: tutti i 12 campi stats + body length 70")
+    void realPayload_msg16_xlsmSheet_allStatsPresent() {
+        String hex = "18020344891936086443104798705410462C"
+                + "38393838323830363636303031303637353334382C" // ICCID
+                + "3435323237332C302C38302C323335352C31382C"
+                + "35383937342C3732362C362C33393439362C313639362C36302C"
+                + "7EE0";
+        byte[] payload = hexToBytes(hex);
+
+        // 1. Body length corretto (bug pre-fix dava 326)
+        assertThat(Tek822Decoder.computeDeclaredBodyLength(payload)).isEqualTo(70);
+
+        // 2. Decodifica integrale
+        DecodedPacket pkt = decode(payload);
+
+        // ICCID preservato come stringa
+        Measure iccid = findMeasure(pkt, "stats.iccid");
+        assertThat(iccid.value()).isEqualTo(0.0);
+        assertThat(iccid.unit()).isEqualTo("89882806660010675348");
+
+        // Tutti i 12 campi attesi
+        assertThat(findMeasure(pkt, "stats.energy_used_ma_minutes").value()).isEqualTo(452273.0);
+        assertThat(findMeasure(pkt, "stats.min_temperature_c").value()).isEqualTo(0.0);
+        assertThat(findMeasure(pkt, "stats.max_temperature_c").value()).isEqualTo(80.0);
+        assertThat(findMeasure(pkt, "stats.message_count").value()).isEqualTo(2355.0);
+        assertThat(findMeasure(pkt, "stats.delivery_fail").value()).isEqualTo(18.0);
+        assertThat(findMeasure(pkt, "stats.total_send_time_s").value()).isEqualTo(58974.0);
+        assertThat(findMeasure(pkt, "stats.max_send_time_s").value()).isEqualTo(726.0);
+        assertThat(findMeasure(pkt, "stats.min_send_time_s").value()).isEqualTo(6.0);
+        assertThat(findMeasure(pkt, "stats.rssi_total").value()).isEqualTo(39496.0);
+        assertThat(findMeasure(pkt, "stats.rssi_valid_count").value()).isEqualTo(1696.0);
+        assertThat(findMeasure(pkt, "stats.rssi_fail_count").value()).isEqualTo(60.0);
+    }
+
+    /**
+     * Payload Msg #17 (GPS) dal foglio XLSM "822". Verifica:
+     *  - header diagnostics (Fix A) ora popolato anche per Msg #17
+     *  - tutti e 12 i campi GPS emessi come Measure (prima ne mancavano 8)
+     *  - LAT/LON/UTC/Date preservati come stringhe NMEA in unit
+     */
+    @Test
+    @DisplayName("Integration — payload XLSM Msg#17 reale: 12 campi GPS + header diagnostics popolato")
+    void realPayload_msg17_xlsmSheet_allGpsFieldsAndHeader() {
+        String hex = "18038204881160086443104798705411492C"
+                + "39352C"                                 // [0] time_to_fix = 95
+                + "3133343434322E302C"                     // [1] UTC = 134442.0
+                + "353235352E393935304E2C"                 // [2] LAT = 5255.9950N
+                + "30303833322E34343137572C"               // [3] LON = 00832.4417W
+                + "312E392C"                               // [4] hdop = 1.9
+                + "3132372E382C"                           // [5] altitude = 127.8
+                + "322C"                                   // [6] fix_mode = 2
+                + "302E30302C"                             // [7] heading = 0.00
+                + "302E302C"                               // [8] speed_kmh = 0.0
+                + "302E302C"                               // [9] speed_knots = 0.0
+                + "3032313031352C"                         // [10] date = 021015
+                + "30342C"                                 // [11] nSat = 04
+                + "8843";                                  // CRC
+        byte[] payload = hexToBytes(hex);
+
+        // 1. Body length corretto (byte 16 = 0x49 = 73)
+        assertThat(Tek822Decoder.computeDeclaredBodyLength(payload)).isEqualTo(73);
+
+        DecodedPacket pkt = decode(payload);
+
+        // 2. Header diagnostics (Fix A): ora popolato anche per Msg #17.
+        // Byte 0 = 0x18 → TEK822 V2 NB
+        Measure prodType = findMeasure(pkt, "header.product_type");
+        assertThat(prodType.value()).isEqualTo(24.0);
+        assertThat(prodType.unit()).isEqualTo("TEK822 V2 NB");
+        // Byte 1 = 0x03 → minor=3, major=0 → "3.0" + BG96
+        Measure hwRev = findMeasure(pkt, "header.hw_revision");
+        assertThat(hwRev.value()).isEqualTo(3.0);
+        assertThat(hwRev.unit()).isEqualTo("BG96");
+        // Byte 2 = 0x82 → fwMajor=2, fwMinor=4 → "2.4" + FW 2.4
+        Measure fwRev = findMeasure(pkt, "header.fw_revision");
+        assertThat(fwRev.value()).isEqualTo(2.4);
+        assertThat(fwRev.unit()).isEqualTo("FW 2.4");
+        // Byte 5 = 0x11 → CSQ = 17
+        assertThat(findMeasure(pkt, "header.gsm_rssi").value()).isEqualTo(17.0);
+        // Byte 6 = 0x60 → battery 0%, RTC set, LTE Act
+        assertThat(findMeasure(pkt, "header.battery_percent").value()).isEqualTo(0.0);
+
+        // 3. GPS fields (Fix B): tutti i 12 campi presenti
+        assertThat(findMeasure(pkt, "gps.time_to_fix_s").value()).isEqualTo(95.0);
+        assertThat(findMeasure(pkt, "gps.utc").unit()).isEqualTo("134442.0");
+        assertThat(findMeasure(pkt, "gps.latitude").unit()).isEqualTo("5255.9950N");
+        assertThat(findMeasure(pkt, "gps.longitude").unit()).isEqualTo("00832.4417W");
+        assertThat(findMeasure(pkt, "gps.hdop").value()).isEqualTo(1.9);
+        assertThat(findMeasure(pkt, "gps.altitude_m").value()).isEqualTo(127.8);
+        assertThat(findMeasure(pkt, "gps.fix_mode").value()).isEqualTo(2.0);
+        assertThat(findMeasure(pkt, "gps.heading_deg").value()).isEqualTo(0.0);
+        assertThat(findMeasure(pkt, "gps.speed_kmh").value()).isEqualTo(0.0);
+        assertThat(findMeasure(pkt, "gps.speed_knots").value()).isEqualTo(0.0);
+        assertThat(findMeasure(pkt, "gps.date").unit()).isEqualTo("021015");
+        assertThat(findMeasure(pkt, "gps.satellites").value()).isEqualTo(4.0);
     }
 
     /**
